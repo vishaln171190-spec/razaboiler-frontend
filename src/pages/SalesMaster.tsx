@@ -532,375 +532,366 @@ const SalesMaster = () => {
 
       <main className="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
         {canMutate && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-600">
-              {editingId ? "Update Sale" : "Create Sale"}
-            </h2>
-          </div>
-          <form onSubmit={handleSave} className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                Customer
-              </label>
-              <select
-                value={formData.customerid}
-                onChange={(e) => setFormData({ ...formData, customerid: e.target.value })}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                required
-              >
-                <option value="">Select Customer</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name || `Customer ${c.id}`}
-                  </option>
-                ))}
-              </select>
+          <><div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-600">
+                {editingId ? "Update Sale" : "Create Sale"}
+              </h2>
             </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                Sale Date
-              </label>
-              <input
-                type="date"
-                value={formData.saledate}
-                onChange={(e) => setFormData({ ...formData, saledate: e.target.value })}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                Sale Status
-              </label>
-              <select
-                value={formData.salestatus}
-                onChange={(e) => setFormData({ ...formData, salestatus: e.target.value })}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-              >
-                <option value="open">Open</option>
-                <option value="close">Close</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-3 flex items-center justify-between">
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingId(null);
-                    setFormData({
-                      customerid: "",
-                      saledate: new Date().toISOString().split("T")[0],
-                      salestatus: "open",
-                      created_by: "1",
-                    });
-                    setDraftItems([]);
-                    setShowItemForm(false);
-                  }}
-                  className="text-sm text-slate-500 underline"
+            <form onSubmit={handleSave} className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                  Customer
+                </label>
+                <select
+                  value={formData.customerid}
+                  onChange={(e) => setFormData({ ...formData, customerid: e.target.value })}
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                  required
                 >
-                  Cancel edit
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-8 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400"
-              >
-                {saving ? "Saving..." : editingId ? "Update Sale" : "Save Sale"}
-                <PlusCircle size={18} />
-              </button>
-            </div>
-
-            <div className="md:col-span-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sale Items</p>
-                <button
-                  type="button"
-                  onClick={() => setShowItemForm((v) => !v)}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                  <option value="">Select Customer</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name || `Customer ${c.id}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                  Sale Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.saledate}
+                  onChange={(e) => setFormData({ ...formData, saledate: e.target.value })}
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                  required />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                  Sale Status
+                </label>
+                <select
+                  value={formData.salestatus}
+                  onChange={(e) => setFormData({ ...formData, salestatus: e.target.value })}
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
                 >
-                  {showItemForm ? "Hide Add Item" : "Add Item"}
+                  <option value="open">Open</option>
+                  <option value="close">Close</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-3 flex items-center justify-between">
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(null);
+                      setFormData({
+                        customerid: "",
+                        saledate: new Date().toISOString().split("T")[0],
+                        salestatus: "open",
+                        created_by: "1",
+                      });
+                      setDraftItems([]);
+                      setShowItemForm(false);
+                    } }
+                    className="text-sm text-slate-500 underline"
+                  >
+                    Cancel edit
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-8 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400"
+                >
+                  {saving ? "Saving..." : editingId ? "Update Sale" : "Save Sale"}
+                  <PlusCircle size={18} />
                 </button>
               </div>
-            </div>
 
-            {showItemForm && (
-              <>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Item
-                  </label>
-                  <select
-                    value={draftItem.itemid}
-                    onChange={(e) => setDraftItem({ ...draftItem, itemid: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+              <div className="md:col-span-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sale Items</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowItemForm((v) => !v)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700"
                   >
-                    <option value="">Select Item</option>
-                    {items.map((it) => (
-                      <option key={it.id} value={it.id}>
-                        {it.name || `Item ${it.id}`}
+                    {showItemForm ? "Hide Add Item" : "Add Item"}
+                  </button>
+                </div>
+              </div>
+
+              {showItemForm && (
+                <>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                      Item
+                    </label>
+                    <select
+                      value={draftItem.itemid}
+                      onChange={(e) => setDraftItem({ ...draftItem, itemid: e.target.value })}
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                    >
+                      <option value="">Select Item</option>
+                      {items.map((it) => (
+                        <option key={it.id} value={it.id}>
+                          {it.name || `Item ${it.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                      Qty
+                    </label>
+                    <input
+                      type="number"
+                      value={draftItem.itemqty}
+                      onChange={(e) => setDraftItem({ ...draftItem, itemqty: e.target.value })}
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                      Weight (Kg)
+                    </label>
+                    <input
+                      type="number"
+                      value={draftItem.itemweight}
+                      onChange={(e) => setDraftItem({ ...draftItem, itemweight: e.target.value })}
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                      Actual Rate
+                    </label>
+                    <input
+                      type="number"
+                      value={draftItem.actualrate}
+                      onChange={(e) => setDraftItem({ ...draftItem, actualrate: e.target.value })}
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                      Sale Rate
+                    </label>
+                    <input
+                      type="number"
+                      value={draftItem.salerate}
+                      onChange={(e) => setDraftItem({ ...draftItem, salerate: e.target.value })}
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                      Discount Type
+                    </label>
+                    <select
+                      value={draftItem.discounttype}
+                      onChange={(e) => setDraftItem({ ...draftItem, discounttype: e.target.value })}
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                    >
+                      <option value="flat">Flat</option>
+                      <option value="percent">Percent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                      Discount
+                    </label>
+                    <input
+                      type="number"
+                      value={draftItem.discount}
+                      onChange={(e) => setDraftItem({ ...draftItem, discount: e.target.value })}
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                  </div>
+                  <div className="md:col-span-3 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={addDraftItem}
+                      className="px-6 py-2 rounded-lg font-bold text-white shadow-md bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      Add Sale Item
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <div className="md:col-span-3">
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3">Item</th>
+                        <th className="px-4 py-3 text-right">Qty</th>
+                        <th className="px-4 py-3 text-right">Weight</th>
+                        <th className="px-4 py-3 text-right">Sale Rate</th>
+                        <th className="px-4 py-3 text-right">Total</th>
+                        <th className="px-4 py-3 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {draftItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-6 text-center text-slate-400">
+                            No items added yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        draftItems.map((it) => (
+                          <tr key={it.id ?? `${it.itemid}`}>
+                            <td className="px-4 py-3 font-semibold text-slate-700">{getItemName(it.itemid)}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-slate-600">{it.itemqty}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                              {Number(it.itemweight || 0).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                              ₹{Number(it.salerate || 0).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums font-bold text-slate-900">
+                              ₹{Number(it.totalsale || 0).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => removeDraftItem(it.id)}
+                                className="text-xs font-bold text-red-600 hover:text-red-700"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </form>
+          </div><div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
+              <div className="p-4 border-b border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-4 bg-white">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                  >
+                    <option value="">All</option>
+                    <option value="open">Open</option>
+                    <option value="close">Close</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Customer</label>
+                  <select
+                    value={customerFilter}
+                    onChange={(e) => setCustomerFilter(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                  >
+                    <option value="">All</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name || `Customer ${c.id}`}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Qty
-                  </label>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Search</label>
                   <input
-                    type="number"
-                    value={draftItem.itemqty}
-                    onChange={(e) => setDraftItem({ ...draftItem, itemqty: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  />
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search customer..."
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm" />
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Weight (Kg)
-                  </label>
-                  <input
-                    type="number"
-                    value={draftItem.itemweight}
-                    onChange={(e) => setDraftItem({ ...draftItem, itemweight: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Actual Rate
-                  </label>
-                  <input
-                    type="number"
-                    value={draftItem.actualrate}
-                    onChange={(e) => setDraftItem({ ...draftItem, actualrate: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Sale Rate
-                  </label>
-                  <input
-                    type="number"
-                    value={draftItem.salerate}
-                    onChange={(e) => setDraftItem({ ...draftItem, salerate: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Discount Type
-                  </label>
-                  <select
-                    value={draftItem.discounttype}
-                    onChange={(e) => setDraftItem({ ...draftItem, discounttype: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  >
-                    <option value="flat">Flat</option>
-                    <option value="percent">Percent</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Discount
-                  </label>
-                  <input
-                    type="number"
-                    value={draftItem.discount}
-                    onChange={(e) => setDraftItem({ ...draftItem, discount: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <div className="md:col-span-3 flex items-center justify-end">
+                <div className="flex items-end">
                   <button
                     type="button"
-                    onClick={addDraftItem}
-                    className="px-6 py-2 rounded-lg font-bold text-white shadow-md bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => {
+                      setStatusFilter("");
+                      setCustomerFilter("");
+                      setSearchTerm("");
+                    } }
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold"
                   >
-                    Add Sale Item
+                    Reset Filters
                   </button>
                 </div>
-              </>
-            )}
-
-            <div className="md:col-span-3">
-              <div className="overflow-hidden rounded-xl border border-slate-200">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-sm">
+                  <thead className="bg-slate-50/80 uppercase text-[10px] font-black tracking-widest text-slate-400 border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3">Item</th>
-                      <th className="px-4 py-3 text-right">Qty</th>
-                      <th className="px-4 py-3 text-right">Weight</th>
-                      <th className="px-4 py-3 text-right">Sale Rate</th>
-                      <th className="px-4 py-3 text-right">Total</th>
-                      <th className="px-4 py-3 text-center">Action</th>
+                      <th className="px-5 py-4">Customer</th>
+                      <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4">Date</th>
+                      <th className="px-5 py-4 text-right">Items</th>
+                      <th className="px-5 py-4 text-right">Total</th>
+                      {(canEdit || canDelete) && <th className="px-5 py-4 text-center">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {draftItems.length === 0 ? (
+                    {filteredSales.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-6 text-center text-slate-400">
-                          No items added yet.
+                        <td colSpan={canEdit || canDelete ? 6 : 5} className="py-24 text-center text-slate-400">
+                          No sales found for {selectedDate}.
                         </td>
                       </tr>
                     ) : (
-                      draftItems.map((it) => (
-                        <tr key={it.id ?? `${it.itemid}`}>
-                          <td className="px-4 py-3 font-semibold text-slate-700">{getItemName(it.itemid)}</td>
-                          <td className="px-4 py-3 text-right tabular-nums text-slate-600">{it.itemqty}</td>
-                          <td className="px-4 py-3 text-right tabular-nums text-slate-600">
-                            {Number(it.itemweight || 0).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-slate-600">
-                            ₹{Number(it.salerate || 0).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-bold text-slate-900">
-                            ₹{Number(it.totalsale || 0).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => removeDraftItem(it.id)}
-                              className="text-xs font-bold text-red-600 hover:text-red-700"
-                            >
-                              Remove
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      filteredSales.map((row) => {
+                        const list = saleItems.filter((it) => String(it.saleid) === String(row.id));
+                        const total = list.reduce((sum, it) => sum + Number(it.totalsale || 0), 0);
+                        return (
+                          <tr key={row.id} className="group hover:bg-blue-50/30 transition-colors">
+                            <td className="px-5 py-3 font-bold text-slate-800">{getCustomerName(row.customerid)}</td>
+                            <td className="px-5 py-3">
+                              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700">
+                                {row.salestatus || "open"}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-slate-700 font-semibold">
+                              {row.saledate?.split("T")[0] || ""}
+                            </td>
+                            <td className="px-5 py-3 text-right tabular-nums text-slate-600">{list.length}</td>
+                            <td className="px-5 py-3 text-right tabular-nums font-bold text-slate-900">
+                              ₹{total.toFixed(2)}
+                            </td>
+                            {(canEdit || canDelete) && (
+                              <td className="px-5 py-3 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  {canEdit && (
+                                    <button
+                                      onClick={() => startEdit(row)}
+                                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                      title="Edit"
+                                    >
+                                      <ClipboardEdit size={16} />
+                                    </button>
+                                  )}
+                                  {canDelete && (
+                                    <button
+                                      onClick={() => handleDelete(row.id)}
+                                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
-            </div>
-          </form>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
-          <div className="p-4 border-b border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-4 bg-white">
-            <div>
-              <label className="text-xs font-semibold text-slate-600 mb-1 block">Status</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
-              >
-                <option value="">All</option>
-                <option value="open">Open</option>
-                <option value="close">Close</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600 mb-1 block">Customer</label>
-              <select
-                value={customerFilter}
-                onChange={(e) => setCustomerFilter(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
-              >
-                <option value="">All</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name || `Customer ${c.id}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600 mb-1 block">Search</label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search customer..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusFilter("");
-                  setCustomerFilter("");
-                  setSearchTerm("");
-                }}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-slate-50/80 uppercase text-[10px] font-black tracking-widest text-slate-400 border-b border-slate-200">
-                <tr>
-                  <th className="px-5 py-4">Customer</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Date</th>
-                  <th className="px-5 py-4 text-right">Items</th>
-                  <th className="px-5 py-4 text-right">Total</th>
-                  {(canEdit || canDelete) && <th className="px-5 py-4 text-center">Action</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredSales.length === 0 ? (
-                  <tr>
-                    <td colSpan={canEdit || canDelete ? 6 : 5} className="py-24 text-center text-slate-400">
-                      No sales found for {selectedDate}.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredSales.map((row) => {
-                    const list = saleItems.filter((it) => String(it.saleid) === String(row.id));
-                    const total = list.reduce((sum, it) => sum + Number(it.totalsale || 0), 0);
-                    return (
-                      <tr key={row.id} className="group hover:bg-blue-50/30 transition-colors">
-                        <td className="px-5 py-3 font-bold text-slate-800">{getCustomerName(row.customerid)}</td>
-                        <td className="px-5 py-3">
-                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700">
-                            {row.salestatus || "open"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-slate-700 font-semibold">
-                          {row.saledate?.split("T")[0] || ""}
-                        </td>
-                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">{list.length}</td>
-                        <td className="px-5 py-3 text-right tabular-nums font-bold text-slate-900">
-                          ₹{total.toFixed(2)}
-                        </td>
-                        {(canEdit || canDelete) && (
-                          <td className="px-5 py-3 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              {canEdit && (
-                                <button
-                                  onClick={() => startEdit(row)}
-                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                  title="Edit"
-                                >
-                                  <ClipboardEdit size={16} />
-                                </button>
-                              )}
-                              {canDelete && (
-                                <button
-                                  onClick={() => handleDelete(row.id)}
-                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          </div>
+            </div></>
         )}
       </main>
 
