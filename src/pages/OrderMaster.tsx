@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Calendar,
   ClipboardEdit,
+  Eye,
   Loader2,
   PlusCircle,
   ShoppingCart,
@@ -732,13 +733,13 @@ const OrderMaster = () => {
                   <th className="px-5 py-4">Customer</th>
                   <th className="px-5 py-4">Order Status</th>
                   <th className="px-5 py-4">Order Date</th>
-                  {(canEdit || canDelete) && <th className="px-5 py-4 text-center">Action</th>}
+                  {(canEdit || canDelete || canView) && <th className="px-5 py-4 text-center">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={canEdit || canDelete ? 4 : 3} className="py-24 text-center text-slate-400">
+                    <td colSpan={canEdit || canDelete ? 5 : 4} className="py-24 text-center text-slate-400">
                       No orders found for {selectedDate}.
                     </td>
                   </tr>
@@ -755,9 +756,19 @@ const OrderMaster = () => {
                         <td className="px-5 py-3 text-slate-700 font-semibold">
                           {row.orderdate?.split("T")[0] || ""}
                         </td>
-                        {(canEdit || canDelete) && (
+                       
+                        {(canEdit || canDelete || canView) && (
                           <td className="px-5 py-3 text-center">
                             <div className="flex items-center justify-center gap-2">
+                               {canView && (
+                                <button
+                                  onClick={() => openViewItems(row)}
+                                  className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                  title="View Items"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                              )}
                               {canEdit && (
                                 <button
                                   onClick={() => startEdit(row)}
