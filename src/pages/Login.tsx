@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Lock, Mail, ChevronRight, ShieldCheck } from "lucide-react";
 import { setCookie } from "../utils/cookieHelper";
 import { normalizeAuthUser, setAuthUser } from "../utils/auth";
+import { usePermissions } from '../utils/PermissionsContext';
 
 /**
  * Raza Boiler Login Screen
@@ -12,6 +13,8 @@ const LoginScreen = ({ onLogin }) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const { setPermissions, setRoles } = usePermissions();
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -44,6 +47,9 @@ const LoginScreen = ({ onLogin }) => {
 
       const authUser = normalizeAuthUser(data) || (data.user || data);
       setAuthUser(authUser);
+      // Set permissions and roles from API response
+      setPermissions(data.permissions || []);
+      setRoles(data.roles || []);
       onLogin(authUser);
     } catch (err) {
       setError(err.message || "Invalid credentials. Try again.");

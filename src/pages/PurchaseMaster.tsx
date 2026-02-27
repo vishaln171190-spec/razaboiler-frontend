@@ -28,10 +28,10 @@ type Purchase = {
 const PurchaseMaster = () => {
   const authUser = getAuthUser();
   const isAdmin = hasRole(authUser, "admin");
-  const canView = isAdmin || hasPermission(authUser, "view");
-  const canCreate = isAdmin || hasPermission(authUser, "create");
-  const canEdit = isAdmin || hasPermission(authUser, "edit");
-  const canDelete = isAdmin || hasPermission(authUser, "delete");
+  const canView = isAdmin || hasPermission(authUser, "daily_purchase");
+  const canCreate = isAdmin || hasPermission(authUser, "daily_purchase");
+  const canEdit = isAdmin || hasPermission(authUser, "daily_purchase");
+  const canDelete = isAdmin || hasPermission(authUser, "daily_purchase");
   const canMutate = canCreate || canEdit;
 
   const [loading, setLoading] = useState(true);

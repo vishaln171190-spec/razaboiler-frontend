@@ -36,10 +36,10 @@ type VehicleType = {
 const VehicleMaster = () => {
   const authUser = getAuthUser();
   const isAdmin = hasRole(authUser, 'admin');
-  const canView = isAdmin || hasPermission(authUser, 'view');
-  const canCreate = isAdmin || hasPermission(authUser, 'create');
-  const canEdit = isAdmin || hasPermission(authUser, 'edit');
-  const canDelete = isAdmin || hasPermission(authUser, 'delete');
+  const canView = isAdmin || hasPermission(authUser, 'master_vehicle');
+  const canCreate = isAdmin || hasPermission(authUser, 'master_vehicle');
+  const canEdit = isAdmin || hasPermission(authUser, 'master_vehicle');
+  const canDelete = isAdmin || hasPermission(authUser, 'master_vehicle');
   const canMutate = canCreate || canEdit;
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);

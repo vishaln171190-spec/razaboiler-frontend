@@ -39,10 +39,10 @@ type SaleItem = {
 const SalesMaster = () => {
   const authUser = getAuthUser();
   const isAdmin = hasRole(authUser, "admin");
-  const canView = isAdmin || hasPermission(authUser, "view");
-  const canCreate = isAdmin || hasPermission(authUser, "create");
-  const canEdit = isAdmin || hasPermission(authUser, "edit");
-  const canDelete = isAdmin || hasPermission(authUser, "delete");
+  const canView = isAdmin || hasPermission(authUser, "daily_sale");
+  const canCreate = isAdmin || hasPermission(authUser, "daily_sale");
+  const canEdit = isAdmin || hasPermission(authUser, "daily_sale");
+  const canDelete = isAdmin || hasPermission(authUser, "daily_sale");
   const canMutate = canCreate || canEdit;
 
   const [loading, setLoading] = useState(true);
@@ -134,7 +134,7 @@ const SalesMaster = () => {
     salerate: Number(it.salerate ?? it.sale_rate ?? 0),
     discounttype: it.discounttype ?? it.discount_type ?? "flat",
     discount: Number(it.discount ?? 0),
-    totalsale: Number(it.totalsale ?? it.total_sale ?? 0),
+    totalsale: Number(it.totalsale ?? computeTotalSale(it)),
   });
 
   const fetchSales = async () => {

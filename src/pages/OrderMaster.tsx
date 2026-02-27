@@ -33,10 +33,10 @@ type Order = {
 const OrderMaster = () => {
   const authUser = getAuthUser();
   const isAdmin = hasRole(authUser, "admin");
-  const canView = isAdmin || hasPermission(authUser, "view");
-  const canCreate = isAdmin || hasPermission(authUser, "create");
-  const canEdit = isAdmin || hasPermission(authUser, "edit");
-  const canDelete = isAdmin || hasPermission(authUser, "delete");
+  const canView = isAdmin || hasPermission(authUser, "daily_order");
+  const canCreate = isAdmin || hasPermission(authUser, "daily_order");
+  const canEdit = isAdmin || hasPermission(authUser, "daily_order");
+  const canDelete = isAdmin || hasPermission(authUser, "daily_order");
   const canMutate = canCreate || canEdit;
 
   const [loading, setLoading] = useState(true);

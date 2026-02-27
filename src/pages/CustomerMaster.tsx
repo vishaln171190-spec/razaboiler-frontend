@@ -33,10 +33,10 @@ const API_BASE_URL = 'http://127.0.0.1:8000/api';
 export default function CustomerMaster(): JSX.Element {
   const authUser = getAuthUser();
   const isAdmin = hasRole(authUser, 'admin');
-  const canView = isAdmin || hasPermission(authUser, 'view');
-  const canCreate = isAdmin || hasPermission(authUser, 'create');
-  const canEdit = isAdmin || hasPermission(authUser, 'edit');
-  const canDelete = isAdmin || hasPermission(authUser, 'delete');
+  const canView = isAdmin || hasPermission(authUser, 'master_customer');
+  const canCreate = isAdmin || hasPermission(authUser, 'master_customer');
+  const canEdit = isAdmin || hasPermission(authUser, 'master_customer');
+  const canDelete = isAdmin || hasPermission(authUser, 'master_customer');
   const canMutate = canCreate || canEdit;
 
   const [loading, setLoading] = useState(true);

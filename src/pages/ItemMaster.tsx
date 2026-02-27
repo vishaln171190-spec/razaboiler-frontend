@@ -14,10 +14,10 @@ type Item = {
 const ItemMaster = () => {
   const authUser = getAuthUser();
   const isAdmin = hasRole(authUser, "admin");
-  const canView = isAdmin || hasPermission(authUser, "view");
-  const canCreate = isAdmin || hasPermission(authUser, "create");
-  const canEdit = isAdmin || hasPermission(authUser, "edit");
-  const canDelete = isAdmin || hasPermission(authUser, "delete");
+  const canView = isAdmin || hasPermission(authUser, "master_item");
+  const canCreate = isAdmin || hasPermission(authUser, "master_item");
+  const canEdit = isAdmin || hasPermission(authUser, "master_item");
+  const canDelete = isAdmin || hasPermission(authUser, "master_item");
   const canMutate = canCreate || canEdit;
 
   const [items, setItems] = useState<Item[]>([]);

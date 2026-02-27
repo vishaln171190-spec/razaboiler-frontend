@@ -43,9 +43,9 @@ type Props = {
 const RouteBuilder = ({ user }: Props) => {
   const authUser = user || getAuthUser();
   const isAdmin = hasRole(authUser, "admin");
-  const canView = isAdmin || hasPermission(authUser, "view");
-  const canCreate = isAdmin || hasPermission(authUser, "create");
-  const canDelete = isAdmin || hasPermission(authUser, "delete");
+  const canView = isAdmin || hasPermission(authUser, "daily_route");
+  const canCreate = isAdmin || hasPermission(authUser, "daily_route");
+  const canDelete = isAdmin || hasPermission(authUser, "daily_route");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<User[]>([]);

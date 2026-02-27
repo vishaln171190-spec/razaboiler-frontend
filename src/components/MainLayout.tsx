@@ -1,4 +1,21 @@
 import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronUp,
+  faChevronDown,
+  faTachometerAlt,
+  faCalendarDay,
+  faUsers,
+  faBuilding,
+  faUser,
+  faCar,
+  faBox,
+  faChartBar,
+  faShoppingCart,
+  faRoute,
+  faSignOutAlt
+} from "@fortawesome/free-solid-svg-icons";
+import { usePermissions } from '../utils/PermissionsContext';
 
 type Props = {
   children: React.ReactNode;
@@ -12,6 +29,99 @@ const MainLayout = ({ children, onLogout, onNavigate, active, user }: Props) => 
   const [dailyOpen, setDailyOpen] = useState(true);
   const [masterOpen, setMasterOpen] = useState(true);
   const [reportsOpen, setReportsOpen] = useState(true);
+
+  const { permissions, roles } = usePermissions();
+
+  // Helper to check permission
+  const hasPermission = (perm: string) => permissions.includes(perm);
+
+  // Helper to check role
+  const hasRole = (role: string) => roles.includes(role);
+
+  // Helper to check if a section has visible submenu
+  const hasVisibleSubmenu = (section: string) =>
+    menuConfig.some(m => m.section === section && hasPermission(m.permission));
+
+  // Menu config
+  const menuConfig = [
+    {
+      key: 'orders',
+      label: 'Order',
+      icon: faShoppingCart,
+      permission: 'daily_order',
+      section: 'daily',
+    },
+    {
+      key: 'route-builder',
+      label: 'Route',
+      icon: faRoute,
+      permission: 'daily_route',
+      section: 'daily',
+    },
+    {
+      key: 'sales',
+      label: 'Sale',
+      icon: faChartBar,
+      permission: 'daily_sale',
+      section: 'daily',
+    },
+    {
+      key: 'purchase',
+      label: 'Purchase',
+      icon: faShoppingCart,
+      permission: 'daily_purchase',
+      section: 'daily',
+    },
+    {
+      key: 'users',
+      label: 'User',
+      icon: faUser,
+      permission: 'master_user',
+      section: 'master',
+    },
+    {
+      key: 'companies',
+      label: 'Company',
+      icon: faBuilding,
+      permission: 'master_company',
+      section: 'master',
+    },
+    {
+      key: 'customers',
+      label: 'Customer',
+      icon: faUsers,
+      permission: 'master_customer',
+      section: 'master',
+    },
+    {
+      key: 'vehicles',
+      label: 'Vehicle',
+      icon: faCar,
+      permission: 'master_vehicle',
+      section: 'master',
+    },
+    {
+      key: 'items',
+      label: 'Item',
+      icon: faBox,
+      permission: 'master_item',
+      section: 'master',
+    },
+    {
+      key: 'sales-reports',
+      label: 'Sales Reports',
+      icon: faChartBar,
+      permission: 'report_sales',
+      section: 'reports',
+    },
+    {
+      key: 'purchase-reports',
+      label: 'Purchase Reports',
+      icon: faShoppingCart,
+      permission: 'report_purchase',
+      section: 'reports',
+    },
+  ];
 
   const sectionButtonClass =
     "w-full text-left px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-white hover:bg-white/5 flex items-center justify-between";
@@ -44,105 +154,92 @@ const MainLayout = ({ children, onLogout, onNavigate, active, user }: Props) => 
         </div>
 
         <nav className="space-y-1">
-          <button onClick={() => onNavigate("home")} className={parentButtonClass(active === "home")}>
-            <span className="text-lg leading-none">▦</span>
+          <button onClick={() => onNavigate("home")} className={parentButtonClass(active === "home")}> 
+            <FontAwesomeIcon icon={faTachometerAlt} className="text-lg" />
             Dashboard
           </button>
 
-          <div className="mt-4">
-            <button
-              type="button"
-              className={sectionButtonClass}
-              onClick={() => setDailyOpen((v) => !v)}
-              aria-expanded={dailyOpen}
-            >
-              Daily Activity
-              <span className="text-base">{dailyOpen ? "-" : "+"}</span>
-            </button>
-          </div>
-
-          {dailyOpen && (
-            <>
-              <button onClick={() => onNavigate("orders")} className={childButtonClass(active === "orders")}>
-                Order
-              </button>
-
+          {hasVisibleSubmenu('daily') && (
+            <div className="mt-4">
               <button
-                onClick={() => onNavigate("route-builder")}
-                className={childButtonClass(active === "route-builder")}
+                type="button"
+                className={sectionButtonClass}
+                onClick={() => setDailyOpen((v) => !v)}
+                aria-expanded={dailyOpen}
               >
-                Route
+                <span className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCalendarDay} />
+                  Daily Activity
+                </span>
+                <FontAwesomeIcon icon={dailyOpen ? faChevronUp : faChevronDown} className="text-base" />
               </button>
+            </div>
+          )}
 
-              <button onClick={() => onNavigate("sales")} className={childButtonClass(active === "sales")}>
-                Sale
-              </button>
+          {dailyOpen && hasVisibleSubmenu('daily') && (
+            <>
+              {menuConfig.filter(m => m.section === 'daily' && hasPermission(m.permission)).map(m => (
+                <button key={m.key} onClick={() => onNavigate(m.key)} className={childButtonClass(active === m.key)}>
+                  <FontAwesomeIcon icon={m.icon} className="mr-2" />
+                  {m.label}
+                </button>
+              ))}
             </>
           )}
 
-          <div className="mt-4">
-            <button
-              type="button"
-              className={sectionButtonClass}
-              onClick={() => setMasterOpen((v) => !v)}
-              aria-expanded={masterOpen}
-            >
-              Master
-              <span className="text-base">{masterOpen ? "-" : "+"}</span>
-            </button>
-          </div>
+          {hasVisibleSubmenu('master') && (
+            <div className="mt-4">
+              <button
+                type="button"
+                className={sectionButtonClass}
+                onClick={() => setMasterOpen((v) => !v)}
+                aria-expanded={masterOpen}
+              >
+                <span className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faUsers} />
+                  Master
+                </span>
+                <FontAwesomeIcon icon={masterOpen ? faChevronUp : faChevronDown} className="text-base" />
+              </button>
+            </div>
+          )}
 
-          {masterOpen && (
+          {masterOpen && hasVisibleSubmenu('master') && (
             <>
-              <button onClick={() => onNavigate("users")} className={childButtonClass(active === "users")}>
-                User
-              </button>
-
-              <button onClick={() => onNavigate("companies")} className={childButtonClass(active === "companies")}>
-                Company
-              </button>
-
-              <button onClick={() => onNavigate("customers")} className={childButtonClass(active === "customers")}>
-                Customer
-              </button>
-
-              <button onClick={() => onNavigate("vehicles")} className={childButtonClass(active === "vehicles")}>
-                Vehicle
-              </button>
-
-              <button onClick={() => onNavigate("items")} className={childButtonClass(active === "items")}>
-                Item
-              </button>
+              {menuConfig.filter(m => m.section === 'master' && hasPermission(m.permission)).map(m => (
+                <button key={m.key} onClick={() => onNavigate(m.key)} className={childButtonClass(active === m.key)}>
+                  <FontAwesomeIcon icon={m.icon} className="mr-2" />
+                  {m.label}
+                </button>
+              ))}
             </>
           )}
 
-          <div className="mt-4">
-            <button
-              type="button"
-              className={sectionButtonClass}
-              onClick={() => setReportsOpen((v) => !v)}
-              aria-expanded={reportsOpen}
-            >
-              Reports
-              <span className="text-base">{reportsOpen ? "-" : "+"}</span>
-            </button>
-          </div>
+          {hasVisibleSubmenu('reports') && (
+            <div className="mt-4">
+              <button
+                type="button"
+                className={sectionButtonClass}
+                onClick={() => setReportsOpen((v) => !v)}
+                aria-expanded={reportsOpen}
+              >
+                <span className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faChartBar} />
+                  Reports
+                </span>
+                <FontAwesomeIcon icon={reportsOpen ? faChevronUp : faChevronDown} className="text-base" />
+              </button>
+            </div>
+          )}
 
-          {reportsOpen && (
+          {reportsOpen && hasVisibleSubmenu('reports') && (
             <>
-              <button
-                onClick={() => onNavigate("sales-reports")}
-                className={childButtonClass(active === "sales-reports")}
-              >
-                Sales Reports
-              </button>
-
-              <button
-                onClick={() => onNavigate("purchase-reports")}
-                className={childButtonClass(active === "purchase-reports")}
-              >
-                Purchase Reports
-              </button>
+              {menuConfig.filter(m => m.section === 'reports' && hasPermission(m.permission)).map(m => (
+                <button key={m.key} onClick={() => onNavigate(m.key)} className={childButtonClass(active === m.key)}>
+                  <FontAwesomeIcon icon={m.icon} className="mr-2" />
+                  {m.label}
+                </button>
+              ))}
             </>
           )}
         </nav>
@@ -150,8 +247,9 @@ const MainLayout = ({ children, onLogout, onNavigate, active, user }: Props) => 
         <div className="mt-6 px-2">
           <button
             onClick={onLogout}
-            className="w-full bg-white/10 text-white font-semibold py-2 rounded-xl hover:bg-white/20 border border-white/10"
+            className="w-full bg-white/10 text-white font-semibold py-2 rounded-xl hover:bg-white/20 border border-white/10 flex items-center gap-2"
           >
+            <FontAwesomeIcon icon={faSignOutAlt} />
             Logout
           </button>
         </div>

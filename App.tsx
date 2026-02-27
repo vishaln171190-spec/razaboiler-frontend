@@ -13,6 +13,7 @@ import MaintenanceMaster from "./src/pages/MaintenanceMaster";
 import RouteBuilder from "./src/pages/RouteBuilder";
 import { getCookie, removeCookie } from "./src/utils/cookieHelper";
 import { clearAuthUser, getAuthUser } from "./src/utils/auth";
+import { PermissionsProvider } from "./src/utils/PermissionsContext";
 
 function App() {
   const [user, setUser] = useState<any>(() => {
@@ -33,32 +34,33 @@ function App() {
 
   const [route, setRoute] = useState<string>("home");
 
-  if (!user) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
-
   return (
-    <MainLayout onLogout={handleLogout} onNavigate={setRoute} active={route} user={user}>
-      {route === "home" && (
-        <div className="p-6">
-          <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
-          <p className="text-slate-600">Select a master from the sidebar to get started.</p>
-        </div>
+    <PermissionsProvider>
+      {!user ? (
+        <LoginScreen onLogin={handleLogin} />
+      ) : (
+        <MainLayout onLogout={handleLogout} onNavigate={setRoute} active={route} user={user}>
+          {route === "home" && (
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+              <p className="text-slate-600">Select a master from the sidebar to get started.</p>
+            </div>
+          )}
+          {route === "users" && <UserMaster />}
+          {route === "companies" && <CompanyMaster />}
+          {route === "customers" && <CustomerMaster />}
+          {route === "items" && <ItemMaster />}
+          {route === "sales" && <SalesMaster />}
+          {route === "purchase" && <PurchaseMaster />}
+          {route === "sales-reports" && <SalesMaster />}
+          {route === "purchase-reports" && <PurchaseMaster />}
+          {route === "orders" && <OrderMaster />}
+          {route === "vehicles" && <VehicleMaster />}
+          {route === "maintenance" && <MaintenanceMaster />}
+          {route === "route-builder" && <RouteBuilder user={user} />}
+        </MainLayout>
       )}
-
-      {route === "users" && <UserMaster />}
-      {route === "companies" && <CompanyMaster />}
-      {route === "customers" && <CustomerMaster />}
-      {route === "items" && <ItemMaster />}
-      {route === "sales" && <SalesMaster />}
-      {route === "purchase" && <PurchaseMaster />}
-      {route === "sales-reports" && <SalesMaster />}
-      {route === "purchase-reports" && <PurchaseMaster />}
-      {route === "orders" && <OrderMaster />}
-      {route === "vehicles" && <VehicleMaster />}
-      {route === "maintenance" && <MaintenanceMaster />}
-      {route === "route-builder" && <RouteBuilder user={user} />}
-    </MainLayout>
+    </PermissionsProvider>
   );
 }
 

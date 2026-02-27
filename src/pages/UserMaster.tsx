@@ -29,10 +29,10 @@ type User = {
 const UserMaster = () => {
   const authUser = getAuthUser();
   const isAdmin = hasRole(authUser, "admin");
-  const canView = isAdmin || hasPermission(authUser, "view");
-  const canCreate = isAdmin || hasPermission(authUser, "create");
-  const canEdit = isAdmin || hasPermission(authUser, "edit");
-  const canDelete = isAdmin || hasPermission(authUser, "delete");
+  const canView = isAdmin || hasPermission(authUser, "master_user");
+  const canCreate = isAdmin || hasPermission(authUser, "master_user");
+  const canEdit = isAdmin || hasPermission(authUser, "master_user");
+  const canDelete = isAdmin || hasPermission(authUser, "master_user");
   const canMutate = canCreate || canEdit;
 
   const [users, setUsers] = useState<User[]>([]);
