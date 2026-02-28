@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Calendar, ClipboardList, Plus, Route, Store, Truck, UserCircle, XCircle } from "lucide-react";
+import { AlertCircle, Calendar, ClipboardList, Plus, PlusCircle, Route, Store, Truck, UserCircle, XCircle } from "lucide-react";
 import { getCookie } from "../utils/cookieHelper";
 import { getAuthUser, hasPermission, hasRole } from "../utils/auth";
 import { API_BASE_URL } from "../../constants";
@@ -235,7 +235,7 @@ const RouteBuilder = ({ user }: Props) => {
   const [routeDateFilter, setRouteDateFilter] = useState("");
   const [stopSearch, setStopSearch] = useState("");
   const [fixedRoute, setFixedRoute] = useState<RouteRow | null>(null);
-
+  const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [routeForm, setRouteForm] = useState({
     routename: "",
     vehicleid: "",
@@ -682,9 +682,59 @@ const RouteBuilder = ({ user }: Props) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 text-slate-900">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
+        <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+          {msg && (
+                  <div
+                    className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 ${
+                      msg.type === "error" ? "bg-red-600 text-white" : "bg-emerald-600 text-white"
+                    }`}
+                  >
+                    {msg.type === "error" ? <AlertCircle size={20} /> : <PlusCircle size={20} />}
+                    <span className="font-medium">{msg.text}</span>
+                  </div>
+                )}
+          
+          <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur-md px-4 py-3 shadow-sm md:px-6">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-200">
+                  <Route size={22} />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight text-slate-800">Route Builder</h1>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Routing</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-1 items-center justify-end gap-3 md:gap-6">
+                <div className="relative group">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors pointer-events-none" />
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={async (e) => {
+                      const newDate = e.target.value;
+                      setSelectedDate(newDate);
+                      let typeFilter = customerTab === "Hotel" ? "fixed" : "variable";
+                      let filteredRoutes = await fetchRoutes(typeFilter, newDate);
+                      setRoutes(filteredRoutes);
+                      if (filteredRoutes.length > 0) {
+                        setActiveRouteId(filteredRoutes[0].id);
+                      } else {
+                        setActiveRouteId(null);
+                      }
+                    }}
+                    className="h-10 w-44 rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div className="max-w-6xl mx-auto space-y-6">
+        {/* <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-emerald-600 text-white shadow-lg shadow-emerald-200">
             <Route size={22} />
           </div>
@@ -714,7 +764,7 @@ const RouteBuilder = ({ user }: Props) => {
                 />
               </div>
             </div>
-        </div>
+        </div> */}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
@@ -722,7 +772,7 @@ const RouteBuilder = ({ user }: Props) => {
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full p-1 shadow-sm w-fit">
+        <div className="flex items-center gap-2 mt-4 bg-white border border-slate-200 rounded-full p-1 shadow-sm w-fit">
           {(["Hotel", "Shop"] as const).map((tab) => (
             <button
               key={tab}
