@@ -677,7 +677,12 @@ const RouteBuilder = ({ user }: Props) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-slate-500">Loading route builder...</div>
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-2">
+          <span className="h-10 w-10 animate-spin rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">⏳</span>
+          <p className="text-sm font-medium text-slate-500">Loading Ledger...</p>
+        </div>
+      </div>
     );
   }
 
