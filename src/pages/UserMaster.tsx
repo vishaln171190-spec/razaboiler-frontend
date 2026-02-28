@@ -68,7 +68,7 @@ const UserMaster = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/users`, { headers });
+      const res = await fetch(`${API_BASE_URL}/users`, { headers });
       if (!res.ok) throw new Error("Failed to fetch users");
       const data = await res.json();
       setUsers(Array.isArray(data) ? data : data.data || []);
@@ -115,7 +115,7 @@ const UserMaster = () => {
 
       if (editingId) {
         // Update existing user
-        const res = await fetch(`${API_BASE}/users/${editingId}`, {
+        const res = await fetch(`${API_BASE_URL}/users/${editingId}`, {
           method: "PUT",
           headers,
           body: JSON.stringify(payload),
@@ -126,7 +126,7 @@ const UserMaster = () => {
         setEditingId(null);
       } else {
         // Create new user
-        const res = await fetch(`${API_BASE}/users`, {
+        const res = await fetch(`${API_BASE_URL}/users`, {
           method: "POST",
           headers,
           body: JSON.stringify(payload),
@@ -156,7 +156,7 @@ const UserMaster = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/users/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${id}`, {
         method: "DELETE",
         headers,
       });
@@ -181,7 +181,7 @@ const UserMaster = () => {
     setError("");
 
     try {
-      const res = await fetch(`${API_BASE}/users/${id}/status`, {
+      const res = await fetch(`${API_BASE_URL}/users/${id}/status`, {
         method: "PATCH",
         headers,
         body: JSON.stringify({ status: newStatus }),
