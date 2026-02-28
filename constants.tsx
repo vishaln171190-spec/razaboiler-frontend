@@ -1,5 +1,7 @@
 
 import React from 'react';
+
+export const API_BASE_URL = "http://127.0.0.1:8000/api";
 import { 
   LayoutDashboard, Truck, ShoppingBag, Users, Store, MapPin, 
   Car, ClipboardCheck, Wallet, Zap, Scissors, ListOrdered, FileSpreadsheet, 

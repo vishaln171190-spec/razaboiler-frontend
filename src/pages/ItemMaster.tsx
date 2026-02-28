@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Package, Plus, Search, Edit2, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { getCookie } from "../utils/cookieHelper";
 import { getAuthUser, hasPermission, hasRole } from "../utils/auth";
-
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+import { API_BASE_URL } from "../../constants";
 
 type Item = {
   id: number | string;

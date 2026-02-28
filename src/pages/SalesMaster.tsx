@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import { getCookie } from "../utils/cookieHelper";
 import { getAuthUser, hasPermission, hasRole } from "../utils/auth";
+import { API_BASE_URL } from "../../constants";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+// ...existing code...
 
 type Customer = { id: number | string; name?: string };
 type Item = { id: number | string; name?: string };

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { getCookie } from '../utils/cookieHelper';
 import { getAuthUser, hasPermission, hasRole } from '../utils/auth';
+import { API_BASE_URL } from "../../constants";
 
 type Vehicle = {
   id: string | number;
@@ -25,8 +26,6 @@ type Vehicle = {
   contactPersonNumber?: string;
   createdBy?: string | number;
 };
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 type VehicleType = {
   id: string | number;

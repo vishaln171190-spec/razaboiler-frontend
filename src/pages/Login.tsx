@@ -28,7 +28,7 @@ const LoginScreen = ({ onLogin }) => {
     try {
       setLoading(true);
 
-      const res = await fetch("http://127.0.0.1:8000/api/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

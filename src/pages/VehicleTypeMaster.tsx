@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Layers, Plus, Edit2, Trash2, CheckCircle2, XCircle, Search } from "lucide-react";
 import { getCookie } from "../utils/cookieHelper";
-
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+import { API_BASE_URL } from "../../constants";
 
 type VehicleType = {
   id: number | string;

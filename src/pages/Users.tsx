@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getCookie } from "../utils/cookieHelper";
 
 type User = { id: number; name: string; email: string };
+import { API_BASE_URL } from "../../constants";
 
 const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -15,7 +16,7 @@ const UsersPage = () => {
 
       try {
         const token = getCookie("auth_token");
-        const res = await fetch("http://127.0.0.1:8000/api/users", {
+        const res = await fetch(`${API_BASE_URL}/users`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
 

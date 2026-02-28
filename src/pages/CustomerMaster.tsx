@@ -27,8 +27,7 @@ type Customer = {
   email?: string;
   location: string;
 };
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+import { API_BASE_URL } from "../../constants";
 
 export default function CustomerMaster(): JSX.Element {
   const authUser = getAuthUser();
