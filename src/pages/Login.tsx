@@ -46,7 +46,7 @@ const LoginScreen = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center font-['Inter','Montserrat',sans-serif]" style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #d47600 100%)" }}>
+    <div className="min-h-screen flex items-center justify-center font-['Inter','Montserrat',sans-serif]" style={{ backgroundImage: "url('login form background.jpg')", backgroundRepeat: "no-repeat", backgroundSize: "cover", backgroundPositionY: "center" }}>
       <div className="backdrop-blur-md bg-white/80 rounded-3xl shadow-2xl p-10 w-full max-w-md flex flex-col items-center">
         <div className="flex items-center gap-4 mb-6">
           <img src="/logo-new.png" alt="Raza Boiler Logo" className="w-16 h-16 object-contain" />
