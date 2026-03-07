@@ -331,12 +331,12 @@ const PaymentMaster = () => {
     [filteredPayments]
   );
 
-  if (loading) {
+ if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-2">
-          <span className="h-10 w-10 animate-spin rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">...</span>
-          <p className="text-sm font-medium text-slate-500">Loading Payments...</p>
+          <span className="h-10 w-10 animate-spin rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">⏳</span>
+          <p className="text-sm font-medium text-slate-500">Loading payments...</p>
         </div>
       </div>
     );

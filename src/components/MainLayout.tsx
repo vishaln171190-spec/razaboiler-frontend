@@ -66,7 +66,7 @@ const MainLayout = ({ children, onLogout, onNavigate, active, user }: Props) => 
     { key: 'items', label: 'Item', icon: faBox, permission: 'master_item', section: 'master' },
     { key: 'sales-reports', label: 'Sales Reports', icon: faChartBar, permission: 'report_sales', section: 'reports' },
     { key: 'purchase-reports', label: 'Purchase Reports', icon: faShoppingCart, permission: 'report_purchase', section: 'reports' },
-    { key: 'payments', label: 'Payment', icon: faMoneyBillTransfer, permission: 'daily_payment', section: 'daily' },
+    { key: 'payments', label: 'Payment', icon: faMoneyBillTransfer, permission: 'daily_sale', section: 'daily' },
   ];
 
   // Sidebar JSX
