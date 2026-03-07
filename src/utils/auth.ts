@@ -9,6 +9,7 @@ export type AuthUser = {
 };
 
 const STORAGE_KEY = "auth_user";
+const TOKEN_KEY = "auth_token";
 
 const toNameList = (list: any): string[] => {
   if (!Array.isArray(list)) return [];
@@ -52,6 +53,31 @@ export const getAuthUser = (): AuthUser | null => {
 
 export const clearAuthUser = () => {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+};
+
+export const setAuthToken = (token: string | null) => {
+  if (!token) return;
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+export const getAuthToken = (): string | null => {
+  try {
+    const direct = localStorage.getItem(TOKEN_KEY);
+    if (direct) return direct;
+    const rawUser = localStorage.getItem(STORAGE_KEY);
+    if (!rawUser) return null;
+    const parsed = JSON.parse(rawUser) as Record<string, any>;
+    return (
+      parsed?.token ||
+      parsed?.access_token ||
+      parsed?.jwt ||
+      parsed?.api_token ||
+      null
+    );
+  } catch {
+    return null;
+  }
 };
 
 export const hasRole = (user: AuthUser | null, role: string): boolean => {

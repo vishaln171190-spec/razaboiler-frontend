@@ -7,6 +7,7 @@ import CustomerMaster from "./src/pages/CustomerMaster";
 import ItemMaster from "./src/pages/ItemMaster";
 import SalesMaster from "./src/pages/SalesMaster";
 import PurchaseMaster from "./src/pages/PurchaseMaster";
+import PaymentMaster from "./src/pages/PaymentMaster";
 import OrderMaster from "./src/pages/OrderMaster";
 import VehicleMaster from "./src/pages/VehicleMaster";
 import MaintenanceMaster from "./src/pages/MaintenanceMaster";
@@ -54,6 +55,7 @@ function App() {
           {route === "items" && <ItemMaster />}
           {route === "sales" && <SalesMaster />}
           {route === "purchase" && <PurchaseMaster />}
+          {route === "payments" && <PaymentMaster />}
           {route === "sales-reports" && <SalesMaster />}
           {route === "purchase-reports" && <PurchaseMaster />}
           {route === "orders" && <OrderMaster />}

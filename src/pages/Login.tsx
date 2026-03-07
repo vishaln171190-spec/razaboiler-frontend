@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Lock, Mail, ChevronRight } from "lucide-react";
 import { setCookie } from "../utils/cookieHelper";
-import { normalizeAuthUser, setAuthUser } from "../utils/auth";
+import { normalizeAuthUser, setAuthToken, setAuthUser } from "../utils/auth";
 import { usePermissions } from '../utils/PermissionsContext';
 import { API_BASE_URL } from "../../constants";
 
@@ -30,14 +30,25 @@ const LoginScreen = ({ onLogin }) => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Login failed");
-      const token = data.token || data.access_token || null;
+      const rawToken =
+        data.token ||
+        data.access_token ||
+        data.jwt ||
+        data.api_token ||
+        data?.data?.token ||
+        data?.data?.access_token ||
+        data?.data?.jwt ||
+        data?.data?.api_token ||
+        null;
+      const token = typeof rawToken === "string" ? rawToken.replace(/^Bearer\s+/i, "").trim() : null;
       if (token) {
         setCookie("auth_token", token, 7);
+        setAuthToken(token);
       }
       const authUser = normalizeAuthUser(data) || (data.user || data);
       setAuthUser(authUser);
-      setPermissions(data.permissions || []);
-      setRoles(data.roles || []);
+      setPermissions((data.permissions || authUser?.permissions || []) as string[]);
+      setRoles((data.roles || authUser?.roles || []) as string[]);
       onLogin(authUser);
     } catch (err) {
       setError(err.message || "Invalid credentials. Try again.");

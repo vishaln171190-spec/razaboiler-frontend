@@ -13,6 +13,7 @@ import {
   faChartBar,
   faShoppingCart,
   faRoute,
+  faMoneyBillTransfer,
   faSignOutAlt
 } from "@fortawesome/free-solid-svg-icons";
 import { usePermissions } from '../utils/PermissionsContext';
@@ -32,8 +33,12 @@ const MainLayout = ({ children, onLogout, onNavigate, active, user }: Props) => 
 
   const { permissions, roles } = usePermissions();
 
-  // Helper to check permission
-  const hasPermission = (perm: string) => permissions.includes(perm);
+  // Helper to check permission (admin can access all, and supports multiple permission aliases)
+  const hasPermission = (perm: string | string[]) => {
+    if (roles.includes("admin")) return true;
+    const list = Array.isArray(perm) ? perm : [perm];
+    return list.some((p) => permissions.includes(p));
+  };
 
   // Helper to check role
   const hasRole = (role: string) => roles.includes(role);
@@ -70,6 +75,13 @@ const MainLayout = ({ children, onLogout, onNavigate, active, user }: Props) => 
       label: 'Purchase',
       icon: faShoppingCart,
       permission: 'daily_purchase',
+      section: 'daily',
+    },
+    {
+      key: 'payments',
+      label: 'Payment',
+      icon: faMoneyBillTransfer,
+      permission: ['daily_payment', 'daily_payments', 'daily_payment_master'],
       section: 'daily',
     },
     {
