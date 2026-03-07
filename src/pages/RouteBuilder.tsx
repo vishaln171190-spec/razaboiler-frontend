@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Calendar, ClipboardList, Plus, PlusCircle, Route, Store, Truck, UserCircle, XCircle } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faEye, faCartPlus, faReceipt, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { getCookie } from "../utils/cookieHelper";
 import { getAuthUser, hasPermission, hasRole } from "../utils/auth";
 import { API_BASE_URL } from "../../constants";
@@ -273,6 +275,8 @@ const RouteBuilder = ({ user }: Props) => {
   const canView = isAdmin || hasPermission(authUser, "daily_route");
   const canCreate = isAdmin || hasPermission(authUser, "daily_route");
   const canDelete = isAdmin || hasPermission(authUser, "daily_route");
+  const isManager = hasRole(authUser, "manager");
+  const isOwner = hasRole(authUser, "owner");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<User[]>([]);
@@ -876,7 +880,7 @@ const RouteBuilder = ({ user }: Props) => {
             {error}
           </div>
         )}
-
+        {(isAdmin || isManager || isOwner) && (
         <div className="flex items-center gap-2 mt-4 bg-white border border-slate-200 rounded-full p-1 shadow-sm w-fit">
           {(["Hotel", "Shop"] as const).map((tab) => (
             <button
@@ -902,14 +906,16 @@ const RouteBuilder = ({ user }: Props) => {
             </button>
           ))}
         </div>
+        )}
 
-        <div className="grid grid-cols-1 gap-6">
-          {canCreate && (
+        <div className="grid grid-cols-1 gap-6 mt-4">
+          {canCreate  && (
             <>
               {/* Route Header */}
+              {(isAdmin || isManager || isOwner) && (
               <div className="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40 p-6 flex flex-col gap-4">
                 <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                  <ClipboardList size={14} /> Route Header
+                  <ClipboardList size={14} /> Route Details
                 </div>
 
                 <form onSubmit={handleCreateRoute} className="space-y-4">
@@ -1016,7 +1022,7 @@ const RouteBuilder = ({ user }: Props) => {
                   <UserCircle size={14} /> Active Route: {activeRouteId ? `#${activeRouteId}` : "None"}
                 </div>
               </div>
-
+                )}
               {/* Route Table */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
                 <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center gap-2">
@@ -1055,14 +1061,16 @@ const RouteBuilder = ({ user }: Props) => {
                                 <button
                                   className="px-3 py-1 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200"
                                   onClick={() => openAddStop(route)}
+                                  title="Add Stops"
                                 >
-                                  Add Stops
+                                  <FontAwesomeIcon icon={faPlus} />
                                 </button>
                                 <button
                                   className="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs hover:bg-emerald-200"
                                   onClick={() => openViewStops(route)}
+                                  title="View Stops"
                                 >
-                                  View Stops
+                                  <FontAwesomeIcon icon={faEye} />
                                 </button>
                                 <button
                                   className="px-3 py-1 rounded-lg bg-purple-100 text-purple-700 font-bold text-xs hover:bg-purple-200"
@@ -1071,22 +1079,27 @@ const RouteBuilder = ({ user }: Props) => {
                                     setAddPurchaseForm({ companyid: "", purchaseqty: "", purchaseweight: "", created_by: "1" });
                                     setAddPurchaseOpen(true);
                                   }}
+                                  title="Add Purchase"
                                 >
-                                  Add Purchase
+                                  <FontAwesomeIcon icon={faCartPlus} />
                                 </button>
                                 <button
                                   className="px-3 py-1 rounded-lg bg-orange-100 text-orange-700 font-bold text-xs hover:bg-orange-200"
                                   onClick={() => openViewPurchase(route)}
+                                  title="View Purchase"
                                 >
-                                  View Purchase
+                                  <FontAwesomeIcon icon={faReceipt} />
                                 </button>
+                                {(isAdmin || isManager || isOwner) && (
                                 <button
                                   className="px-3 py-1 rounded-lg bg-red-100 text-red-700 font-bold text-xs hover:bg-red-200"
                                   onClick={() => handleDeleteRoute(route.id)}
                                   disabled={saving}
+                                  title="Delete Route"
                                 >
-                                  Delete
+                                  <FontAwesomeIcon icon={faTrash} />
                                 </button>
+                                  )}
                               </div>
                             </td>
                           </tr>
