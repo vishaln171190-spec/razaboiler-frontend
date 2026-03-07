@@ -1,7 +1,8 @@
 
 import React from 'react';
 //need API_BASE_URL on enviroment if local then local url and if dev dev url else production url 
-export const API_BASE_URL = "https://dev-api.razaboilers.com/api";
+// export const API_BASE_URL = "https://dev-api.razaboilers.com/api";
+export const API_BASE_URL = "http://127.0.0.1:8000/api";
 import { 
   LayoutDashboard, Truck, ShoppingBag, Users, Store, MapPin, 
   Car, ClipboardCheck, Wallet, Zap, Scissors, ListOrdered, FileSpreadsheet, 

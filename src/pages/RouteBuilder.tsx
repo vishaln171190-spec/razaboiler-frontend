@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Calendar, ClipboardList, Plus, PlusCircle, Route, Store, Truck, UserCircle, XCircle } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faEye, faCartPlus, faReceipt, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { getCookie } from "../utils/cookieHelper";
 import { getAuthUser, hasPermission, hasRole } from "../utils/auth";
 import { API_BASE_URL } from "../../constants";
+import { Company } from "@/types";
+import CompanyMaster from "./CompanyMaster";
 
 type Vehicle = { id: number | string; vehicalid?: string; rcnumber?: string; vehicalmodel?: string };
 type User = { id: number | string; name?: string; username?: string };
@@ -23,6 +27,8 @@ type RouteRow = {
   deliverydate: string;
   status?: string;
   type?: string;
+  fuel?: number | string;
+  allowance?: number | string;
 };
 
 type RouteStop = {
@@ -35,11 +41,33 @@ type RouteStop = {
   rateofsale: number | string;
 };
 
+type RoutePurchase = {
+  id: number | string;
+  routeid: number | string;
+  companyname: number | string;
+  purchaseqty: number | string;
+  purchaseweight: number | string;
+};
+
 type Props = {
   user?: any;
 };
 
 const RouteBuilder = ({ user }: Props) => {
+      // --- PURCHASE POPUP STATE ---
+      const [addPurchaseOpen, setAddPurchaseOpen] = useState(false);
+      const [addPurchaseRoute, setAddPurchaseRoute] = useState<RouteRow | null>(null);
+      const [addPurchaseForm, setAddPurchaseForm] = useState({
+        companyid: "",
+        purchaseqty: "",
+        purchaseweight: "",
+        created_by: "1",
+      });
+      const [addPurchaseSaving, setAddPurchaseSaving] = useState(false);
+      const [viewPurchaseOpen, setViewPurchaseOpen] = useState(false);
+      const [viewPurchaseRoute, setViewPurchaseRoute] = useState<RouteRow | null>(null);
+      const [viewPurchaseList, setViewPurchaseList] = useState<any[]>([]);
+      const [viewPurchaseLoading, setViewPurchaseLoading] = useState(false);
     // --- POPUP STATE HOOKS ---
     // Add Stops popup state
     const [addStopOpen, setAddStopOpen] = useState(false);
@@ -155,6 +183,21 @@ const RouteBuilder = ({ user }: Props) => {
         setViewStopsLoading(false);
       }
     };
+
+    const openViewPurchase = async (route: RouteRow) => {
+      setViewPurchaseRoute(route);
+      setViewPurchaseOpen(true);
+      setViewPurchaseLoading(true);
+      try {
+        const stops = await fetchPurchases(route.id);
+        setViewPurchaseList(stops);
+        setViewStopsEdit({});
+      } catch (err) {
+        setError("Failed to load purchases");
+      } finally {
+        setViewPurchaseLoading(false);
+      }
+    };
     const closeViewStops = () => {
       setViewStopsOpen(false);
       setViewStopsRoute(null);
@@ -162,6 +205,13 @@ const RouteBuilder = ({ user }: Props) => {
       setViewStopsEdit({});
     };
 
+    
+    const closeViewPurchase = () => {
+      setViewPurchaseOpen(false);
+      setViewStopsRoute(null);
+      setViewPurchaseList([]);
+      setViewStopsEdit({});
+    };
     // Handler to edit a stop in the popup
     const handleEditViewStop = (stopId: string | number, field: keyof RouteStop, value: string) => {
       setViewStopsEdit((prev) => ({
@@ -215,15 +265,23 @@ const RouteBuilder = ({ user }: Props) => {
         setViewStopsSaving((prev) => ({ ...prev, [stop.id]: false }));
       }
     };
+
+   const showToast = (text: string, type: "success" | "error") => {
+    setMsg({ text, type });
+    setTimeout(() => setMsg(null), 3000);
+  }; 
   const authUser = user || getAuthUser();
   const isAdmin = hasRole(authUser, "admin");
   const canView = isAdmin || hasPermission(authUser, "daily_route");
   const canCreate = isAdmin || hasPermission(authUser, "daily_route");
   const canDelete = isAdmin || hasPermission(authUser, "daily_route");
+  const isManager = hasRole(authUser, "manager");
+  const isOwner = hasRole(authUser, "owner");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<User[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [routes, setRoutes] = useState<RouteRow[]>([]);
   const [stops, setStops] = useState<RouteStop[]>([]);
@@ -244,6 +302,8 @@ const RouteBuilder = ({ user }: Props) => {
     deliverydate: new Date().toISOString().split("T")[0],
     status: "intransit",
     created_by: "1",
+    fuel: "",
+    allowance: "",
   });
 
   const [stopForm, setStopForm] = useState({
@@ -270,7 +330,7 @@ const RouteBuilder = ({ user }: Props) => {
   };
 
   const fetchDrivers = async () => {
-    const res = await fetch(`${API_BASE_URL}/users`, { method: "GET", headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE_URL}/drivers`, { method: "GET", headers: getAuthHeaders() });
     const data = await res.json();
     return (data.data || data || []) as User[];
   };
@@ -295,6 +355,37 @@ const RouteBuilder = ({ user }: Props) => {
       } as Customer;
     });
   };
+
+  const fetchCompanies = async () => {
+    const res = await fetch(`${API_BASE_URL}/company-master`, { method: "GET", headers: getAuthHeaders() });
+    const data = await res.json();
+    const list = (data.data || data || []) as any[];
+    return list.map((c) => {
+      return {
+        id: c.id ?? c.company_id ?? c._id ?? Math.random().toString(36).slice(2),
+        company_name: c.company_name || c.name || "",
+        companyname: c.company_name || c.name || "",
+      } as unknown as Company;
+    });
+  };
+
+  const fetchCompaniesV2 = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/company-master`, { method: "GET", headers: getAuthHeaders() });
+      const data = await res.json();
+      const list = (data.data || data || []) as any[];
+      return list.map((c) => {
+        return {
+          id: c.id ?? c.company_id ?? c._id ?? Math.random().toString(36).slice(2),
+          company_name: c.company_name || c.name || "",
+          companyname: c.company_name || c.name || "",
+        } as unknown as Company;
+      });
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      return [];
+    }
+  };  
 
   const fetchItems = async () => {
     const res = await fetch(`${API_BASE_URL}/items`, { method: "GET", headers: getAuthHeaders() });
@@ -326,6 +417,15 @@ const RouteBuilder = ({ user }: Props) => {
     return (data.data || data || []) as RouteStop[];
   };
 
+  const fetchPurchases = async (routeId: string | number) => {
+    const res = await fetch(`${API_BASE_URL}/route-builder/${routeId}/purchases`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    return (data.data || data || []) as RoutePurchase[];
+  };
+
   useEffect(() => {
     if (!canView) {
       setLoading(false);
@@ -334,18 +434,20 @@ const RouteBuilder = ({ user }: Props) => {
     const load = async () => {
       try {
         setLoading(true);
-        const [v, d, c, i, r] = await Promise.all([
+        const [v, d, c, i, r, f] = await Promise.all([
           fetchVehicles(),
           fetchDrivers(),
           fetchCustomers(),
           fetchItems(),
           fetchRoutes(),
+          fetchCompanies(),
         ]);
         setVehicles(v);
         setDrivers(d);
         setCustomers(c);
         setItems(i);
         setRoutes(r);
+        setCompanies(f);
         if (r.length > 0) setActiveRouteId(r[0].id);
       } catch (err) {
         console.error(err);
@@ -525,6 +627,8 @@ const RouteBuilder = ({ user }: Props) => {
           deliverydate: routeForm.deliverydate,
           status: routeForm.status,
           created_by: Number(routeForm.created_by),
+          fuel: Number(routeForm.fuel || 0),
+          allowance: Number(routeForm.allowance || 0),
         }),
       });
       if (!res.ok) throw new Error("Create route failed");
@@ -776,7 +880,7 @@ const RouteBuilder = ({ user }: Props) => {
             {error}
           </div>
         )}
-
+        {(isAdmin || isManager || isOwner) && (
         <div className="flex items-center gap-2 mt-4 bg-white border border-slate-200 rounded-full p-1 shadow-sm w-fit">
           {(["Hotel", "Shop"] as const).map((tab) => (
             <button
@@ -802,14 +906,16 @@ const RouteBuilder = ({ user }: Props) => {
             </button>
           ))}
         </div>
+        )}
 
-        <div className="grid grid-cols-1 gap-6">
-          {canCreate && (
+        <div className="grid grid-cols-1 gap-6 mt-4">
+          {canCreate  && (
             <>
               {/* Route Header */}
+              {(isAdmin || isManager || isOwner) && (
               <div className="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40 p-6 flex flex-col gap-4">
                 <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                  <ClipboardList size={14} /> Route Header
+                  <ClipboardList size={14} /> Route Details
                 </div>
 
                 <form onSubmit={handleCreateRoute} className="space-y-4">
@@ -847,7 +953,7 @@ const RouteBuilder = ({ user }: Props) => {
                       />
                     </div>
                   </div>
-                  <div>
+                  <div>         
                     <label className="text-xs font-semibold text-slate-600 mb-1 block">
                       {routeForm.type === "fixed" ? "Vehicle (Auto)" : "Select Vehicle"}
                     </label>
@@ -882,6 +988,26 @@ const RouteBuilder = ({ user }: Props) => {
                       ))}
                     </select>
                   </div>
+                  <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Fuel</label>
+                      <input
+                        type="number"
+                        value={routeForm.fuel || ""}
+                        onChange={(e) => setRouteForm({ ...routeForm, fuel: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                        placeholder="Enter fuel amount"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Allowance</label>
+                      <input
+                        type="number"
+                        value={routeForm.allowance || ""}
+                        onChange={(e) => setRouteForm({ ...routeForm, allowance: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                        placeholder="Enter allowance amount"
+                      />
+                    </div>
 
                   <button
                     type="submit"
@@ -896,7 +1022,7 @@ const RouteBuilder = ({ user }: Props) => {
                   <UserCircle size={14} /> Active Route: {activeRouteId ? `#${activeRouteId}` : "None"}
                 </div>
               </div>
-
+                )}
               {/* Route Table */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
                 <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center gap-2">
@@ -910,6 +1036,8 @@ const RouteBuilder = ({ user }: Props) => {
                         <th className="px-6 py-4 border-b border-slate-100">Route Name</th>
                         <th className="px-6 py-4 border-b border-slate-100">Vehicle</th>
                         <th className="px-6 py-4 border-b border-slate-100">Date</th>
+                        <th className="px-6 py-4 border-b border-slate-100">Fuel</th>
+                        <th className="px-6 py-4 border-b border-slate-100">Allowance</th>
                         <th className="px-6 py-4 border-b border-slate-100 text-center">Actions</th>
                       </tr>
                     </thead>
@@ -926,27 +1054,52 @@ const RouteBuilder = ({ user }: Props) => {
                             <td className="px-6 py-4 font-semibold text-slate-700">{route.routename || route.route_name || route.name || `Route ${route.id}`}</td>
                             <td className="px-6 py-4 text-slate-600">{(() => { const v = vehicles.find((x) => String(x.id) === String(route.vehicleid)); return v?.vehicalid || v?.rcnumber || v?.vehicalmodel || `Vehicle ${route.vehicleid}`; })()}</td>
                             <td className="px-6 py-4 text-slate-600">{route.deliverydate?.split("T")[0]}</td>
+                            <td className="px-6 py-4 text-slate-600">{route.fuel || "N/A"}</td>
+                            <td className="px-6 py-4 text-slate-600">{route.allowance || "N/A"}</td>
                             <td className="px-6 py-4 text-center">
                               <div className="flex items-center justify-center gap-2">
                                 <button
                                   className="px-3 py-1 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200"
                                   onClick={() => openAddStop(route)}
+                                  title="Add Stops"
                                 >
-                                  Add Stops
+                                  <FontAwesomeIcon icon={faPlus} />
                                 </button>
                                 <button
                                   className="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs hover:bg-emerald-200"
                                   onClick={() => openViewStops(route)}
+                                  title="View Stops"
                                 >
-                                  View Stops
+                                  <FontAwesomeIcon icon={faEye} />
                                 </button>
+                                <button
+                                  className="px-3 py-1 rounded-lg bg-purple-100 text-purple-700 font-bold text-xs hover:bg-purple-200"
+                                  onClick={() => {
+                                    setAddPurchaseRoute(route);
+                                    setAddPurchaseForm({ companyid: "", purchaseqty: "", purchaseweight: "", created_by: "1" });
+                                    setAddPurchaseOpen(true);
+                                  }}
+                                  title="Add Purchase"
+                                >
+                                  <FontAwesomeIcon icon={faCartPlus} />
+                                </button>
+                                <button
+                                  className="px-3 py-1 rounded-lg bg-orange-100 text-orange-700 font-bold text-xs hover:bg-orange-200"
+                                  onClick={() => openViewPurchase(route)}
+                                  title="View Purchase"
+                                >
+                                  <FontAwesomeIcon icon={faReceipt} />
+                                </button>
+                                {(isAdmin || isManager || isOwner) && (
                                 <button
                                   className="px-3 py-1 rounded-lg bg-red-100 text-red-700 font-bold text-xs hover:bg-red-200"
                                   onClick={() => handleDeleteRoute(route.id)}
                                   disabled={saving}
+                                  title="Delete Route"
                                 >
-                                  Delete
+                                  <FontAwesomeIcon icon={faTrash} />
                                 </button>
+                                  )}
                               </div>
                             </td>
                           </tr>
@@ -1031,6 +1184,145 @@ const RouteBuilder = ({ user }: Props) => {
                               </div>
                             </div>
                           )}
+
+
+                          {/* Add Purchase Popup */}
+                          {addPurchaseOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                              <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+                                  <div>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Add Purchase</h3>
+                                    <p className="text-xs text-slate-400">Route: {addPurchaseRoute?.routename || addPurchaseRoute?.route_name || addPurchaseRoute?.name || addPurchaseRoute?.id}</p>
+                                  </div>
+                                  <button onClick={() => setAddPurchaseOpen(false)} className="text-sm font-bold text-slate-500">Close</button>
+                                </div>
+                                <form className="p-6 space-y-4">
+                                  <div>
+                                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Company</label>
+                                    <select
+                                      value={addPurchaseForm.companyid}
+                                      onChange={e => setAddPurchaseForm(f => ({ ...f, companyid: e.target.value }))}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                                      required
+                                    >
+                                      <option value="">Select Company</option>
+                                      {/* TODO: Replace with actual company list */}
+                                      {companies.map((c) => (
+                                        <option key={c.id} value={c.id}>{c.company_name || c.companyname || `Company ${c.id}`}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Purchase Quantity</label>
+                                    <input
+                                      type="number"
+                                      value={addPurchaseForm.purchaseqty}
+                                      onChange={e => setAddPurchaseForm(f => ({ ...f, purchaseqty: e.target.value }))}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Purchase Weight</label>
+                                    <input
+                                      type="number"
+                                      value={addPurchaseForm.purchaseweight}
+                                      onChange={e => setAddPurchaseForm(f => ({ ...f, purchaseweight: e.target.value }))}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                                      required
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled={addPurchaseSaving}
+                                    className="w-full mt-2 bg-purple-600 text-white font-bold py-3 rounded-full shadow-lg transition-all hover:bg-purple-700 disabled:bg-slate-400"
+                                    onClick={async () => {
+                                      if (!addPurchaseRoute || !addPurchaseForm.companyid || !addPurchaseForm.purchaseqty || !addPurchaseForm.purchaseweight) {
+                                        setMsg({ text: "Please fill all fields.", type: "error" });
+                                        return;
+                                      }
+                                      setAddPurchaseSaving(true);
+                                      try {
+                                        const payload = {
+                                          routeid: Number(addPurchaseRoute.id),
+                                          vehicleid: Number(addPurchaseRoute.vehicleid),
+                                          companyid: Number(addPurchaseForm.companyid),
+                                          purchaseqty: Number(addPurchaseForm.purchaseqty),
+                                          parchaseweight: Number(addPurchaseForm.purchaseweight),
+                                          created_by: Number(addPurchaseForm.created_by),
+                                          purchasedate: addPurchaseRoute.deliverydate ? addPurchaseRoute.deliverydate.split("T")[0] : new Date().toISOString().split("T")[0],
+                                          status: "open",
+                                        };
+                                        const res = await fetch(`${API_BASE_URL}/purchasemaster`, {
+                                          method: "POST",
+                                          headers: getAuthHeaders(),
+                                          body: JSON.stringify(payload),
+                                        });
+                                        if (!res.ok) throw new Error("Failed to save purchase");
+                                        //setMsg({ text: "Purchase saved successfully!", type: "success" });
+                                        showToast("Purchase saved successfully!", "success");
+                                        
+                                        setAddPurchaseOpen(false);
+                                      } catch (err) {
+                                        // setMsg({ text: "Failed to save purchase.", type: "error" });
+                                        showToast("Failed to save purchase.", "error");
+                                      } finally {
+                                        setAddPurchaseSaving(false);
+                                      }
+                                    }}
+                                  >
+                                    {addPurchaseSaving ? "Saving..." : "Add Purchase"}
+                                  </button>
+                                </form>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* View Purchase Popup */}
+                          {viewPurchaseOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                              <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+                                  <div>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Purchases for Route</h3>
+                                    <p className="text-xs text-slate-400">Route: {viewPurchaseRoute?.routename || viewPurchaseRoute?.route_name || viewPurchaseRoute?.name || viewPurchaseRoute?.id}</p>
+                                  </div>
+                                  <button onClick={closeViewPurchase} className="text-sm font-bold text-slate-500">Close</button>
+                                </div>
+                                <div className="p-6">
+                                  {viewPurchaseLoading ? (
+                                    <div className="text-center text-slate-400">Loading purchases...</div>
+                                  ) : viewPurchaseList.length === 0 ? (
+                                    <div className="text-center text-slate-400">No purchases for this route.</div>
+                                  ) : (
+                                    <table className="w-full text-left border-collapse text-sm">
+                                      <thead>
+                                        <tr className="bg-slate-50/70 text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                                          <th className="px-2 py-2">Company</th>
+                                          <th className="px-2 py-2">Qty</th>
+                                          <th className="px-2 py-2">Weight</th>
+                                          <th className="px-2 py-2">Date</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {viewPurchaseList.map(purchase => (
+                                          <tr key={purchase.id}>
+                                            <td className="px-2 py-2">{purchase.companyname}</td>
+                                            <td className="px-2 py-2">{purchase.purchaseqty}</td>
+                                            <td className="px-2 py-2">{purchase.parchaseweight}</td>
+                                            <td className="px-2 py-2">{purchase.purchasedate}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                         
 
                           {/* View Stops Popup */}
                           {viewStopsOpen && (
