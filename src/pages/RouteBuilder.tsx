@@ -330,7 +330,7 @@ const RouteBuilder = ({ user }: Props) => {
   };
 
   const fetchDrivers = async () => {
-    const res = await fetch(`${API_BASE_URL}/users`, { method: "GET", headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE_URL}/drivers`, { method: "GET", headers: getAuthHeaders() });
     const data = await res.json();
     return (data.data || data || []) as User[];
   };
