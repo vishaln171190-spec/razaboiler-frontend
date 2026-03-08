@@ -110,6 +110,7 @@ const SalesReports: React.FC = () => {
       // Normalize data for table
       const rows = (data.data || data || []).map((row: any) => ({
         customername: row.customername || row.customer_name || row.customer || '',
+        saledate: row.saledate || row.date || '',
         item: row.itemname || row.item || row.name || '',
         weight: row.sale_weight || row.weight || 0,
         rate: row.sale_rate || row.rate || 0,
@@ -182,27 +183,7 @@ const SalesReports: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-1 items-center justify-end gap-3 md:gap-6">
-            <div className="relative group">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors pointer-events-none" />
-              {/* Date filter UI */}
-              <select
-                value={dateFilter}
-                onChange={e => setDateFilter(e.target.value)}
-                className="h-10 w-44 rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
-              >
-                <option value='today'>Today</option>
-                <option value='yesterday'>Yesterday</option>
-                <option value='thisweek'>This Week</option>
-                <option value='thismonth'>This Month</option>
-                <option value='customdate'>Custom Date</option>
-              </select>
-              {dateFilter === 'customdate' && (
-                <div className="flex gap-2 mt-2">
-                  <input type='date' value={customStart} onChange={e => setCustomStart(e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer" />
-                  <input type='date' value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer" />
-                </div>
-              )}
-            </div>
+            
           </div>
         </div>
       </header>
@@ -227,12 +208,35 @@ const SalesReports: React.FC = () => {
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}
             </select>
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors pointer-events-none" />
+              {/* Date filter UI */}
+              <select
+                value={dateFilter}
+                onChange={e => setDateFilter(e.target.value)}
+                className="h-10 w-44 rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+              >
+                <option value='today'>Today</option>
+                <option value='yesterday'>Yesterday</option>
+                <option value='thisweek'>This Week</option>
+                <option value='thismonth'>This Month</option>
+                <option value='customdate'>Custom Date</option>
+              </select>
+              {dateFilter === 'customdate' && (
+                <div className="flex gap-2 mt-2">
+                  <input type='date' value={customStart} onChange={e => setCustomStart(e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer" />
+                  <input type='date' value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer" />
+                </div>
+              )}
+            
+            
+          </div>
+          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
             <button onClick={getReport} disabled={loading} className="px-8 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400">
               {loading ? 'Loading...' : 'Get Report'}
             </button>
             <button onClick={exportExcel} className="px-8 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400">
               Export
-            </button>
+            </button>          
           </div>
         </div>
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 mt-6">
@@ -243,26 +247,28 @@ const SalesReports: React.FC = () => {
             <table className="w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50/80 uppercase text-[10px] font-black tracking-widest text-slate-400 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Item</th>
-                  <th className="px-6 py-4">Sale Weight</th>
-                  <th className="px-6 py-4">Sale Rate</th>
-                  <th className="px-6 py-4">Total Amount</th>
+                  <th className="px-6 py-4 text-center">Customer</th>
+                  <th className="px-6 py-4 text-center">Date</th>
+                  <th className="px-6 py-4 text-center">Item</th>
+                  <th className="px-6 py-4 text-center">Sale Weight</th>
+                  <th className="px-6 py-4 text-right">Sale Rate</th>
+                  <th className="px-6 py-4 text-right">Total Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {reportData.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">No sales found.</td>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">No sales found.</td>
                   </tr>
                 ) : (
                   reportData.map((row, idx) => (
                     <tr key={idx} className="hover:bg-emerald-50/30 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-slate-700">{row.customername}</td>
-                      <td className="px-6 py-4 font-semibold text-slate-700">{row.item}</td>
-                      <td className="px-6 py-4 text-slate-600">{row.weight}</td>
-                      <td className="px-6 py-4 text-slate-600">{row.rate}</td>
-                      <td className="px-6 py-4 text-slate-900 font-bold">{row.total}</td>
+                      <td className="px-6 py-4 font-semibold text-slate-700 text-center">{row.customername}</td>
+                      <td className="px-6 py-4 font-semibold text-slate-700 text-center">{row.saledate}</td>
+                      <td className="px-6 py-4 font-semibold text-slate-700 text-center">{row.item}</td>
+                      <td className="px-6 py-4 text-slate-600 text-center">{row.weight}</td>
+                      <td className="px-6 py-4 text-slate-600 text-right">{row.rate}</td>
+                      <td className="px-6 py-4 text-slate-900 font-bold text-right">{row.total}</td>
                     </tr>
                   ))
                 )}
@@ -271,7 +277,7 @@ const SalesReports: React.FC = () => {
                 <tfoot className="bg-slate-900 text-white shadow-2xl">
                   <tr>
                     <td className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">Total Amount</td>
-                    <td colSpan={4} className="px-6 py-4 text-right font-bold">{totalAmount.toFixed(2)}</td>
+                    <td colSpan={5} className="px-6 py-4 text-right font-bold">{totalAmount.toFixed(2)}</td>
                   </tr>
                 </tfoot>
               )}
