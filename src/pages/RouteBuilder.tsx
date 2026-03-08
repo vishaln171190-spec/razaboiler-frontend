@@ -64,6 +64,7 @@ const RouteBuilder = ({ user }: Props) => {
         created_by: "1",
       });
       const [addPurchaseSaving, setAddPurchaseSaving] = useState(false);
+      const [addPurchaseCompanySearch, setAddPurchaseCompanySearch] = useState("");
       const [viewPurchaseOpen, setViewPurchaseOpen] = useState(false);
       const [viewPurchaseRoute, setViewPurchaseRoute] = useState<RouteRow | null>(null);
       const [viewPurchaseList, setViewPurchaseList] = useState<any[]>([]);
@@ -81,6 +82,7 @@ const RouteBuilder = ({ user }: Props) => {
       created_by: "1",
     });
     const [addStopSaving, setAddStopSaving] = useState(false);
+    const [addStopCustomerSearch, setAddStopCustomerSearch] = useState("");
 
     // View Stops popup state
     const [viewStopsOpen, setViewStopsOpen] = useState(false);
@@ -102,6 +104,7 @@ const RouteBuilder = ({ user }: Props) => {
         rateofsale: "",
         created_by: "1",
       });
+      setAddStopCustomerSearch("");
       setAddStopOpen(true);
     };
     const closeAddStop = () => {
@@ -1077,6 +1080,7 @@ const RouteBuilder = ({ user }: Props) => {
                                   onClick={() => {
                                     setAddPurchaseRoute(route);
                                     setAddPurchaseForm({ companyid: "", purchaseqty: "", purchaseweight: "", created_by: "1" });
+                                    setAddPurchaseCompanySearch("");
                                     setAddPurchaseOpen(true);
                                   }}
                                   title="Add Purchase"
@@ -1119,6 +1123,13 @@ const RouteBuilder = ({ user }: Props) => {
                                 <form onSubmit={handleAddStop} className="p-6 space-y-4">
                                   <div>
                                     <label className="text-xs font-semibold text-slate-600 mb-1 block">Customer</label>
+                                    <input
+                                      type="text"
+                                      value={addStopCustomerSearch}
+                                      onChange={e => setAddStopCustomerSearch(e.target.value)}
+                                      placeholder="Search customer..."
+                                      className="mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                                    />
                                     <select
                                       value={addStopForm.customerid}
                                       onChange={e => setAddStopForm(f => ({ ...f, customerid: e.target.value }))}
@@ -1126,7 +1137,15 @@ const RouteBuilder = ({ user }: Props) => {
                                       required
                                     >
                                       <option value="">Select Customer</option>
-                                      {customers.map((c) => (
+                                      {customers
+                                        .filter((c) => (c.type || "Shop") === customerTab)
+                                        .filter((c) => {
+                                          const q = addStopCustomerSearch.trim().toLowerCase();
+                                          if (!q) return true;
+                                          const name = (c.customer_name || c.customername || "").toLowerCase();
+                                          return name.includes(q);
+                                        })
+                                        .map((c) => (
                                         <option key={c.id} value={c.id}>{c.customer_name || c.customername || `Customer ${c.id}`}</option>
                                       ))}
                                     </select>
@@ -1200,6 +1219,13 @@ const RouteBuilder = ({ user }: Props) => {
                                 <form className="p-6 space-y-4">
                                   <div>
                                     <label className="text-xs font-semibold text-slate-600 mb-1 block">Company</label>
+                                    <input
+                                      type="text"
+                                      value={addPurchaseCompanySearch}
+                                      onChange={e => setAddPurchaseCompanySearch(e.target.value)}
+                                      placeholder="Search company..."
+                                      className="mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
+                                    />
                                     <select
                                       value={addPurchaseForm.companyid}
                                       onChange={e => setAddPurchaseForm(f => ({ ...f, companyid: e.target.value }))}
@@ -1207,8 +1233,14 @@ const RouteBuilder = ({ user }: Props) => {
                                       required
                                     >
                                       <option value="">Select Company</option>
-                                      {/* TODO: Replace with actual company list */}
-                                      {companies.map((c) => (
+                                      {companies
+                                        .filter((c) => {
+                                          const q = addPurchaseCompanySearch.trim().toLowerCase();
+                                          if (!q) return true;
+                                          const name = (c.company_name || c.companyname || "").toLowerCase();
+                                          return name.includes(q);
+                                        })
+                                        .map((c) => (
                                         <option key={c.id} value={c.id}>{c.company_name || c.companyname || `Company ${c.id}`}</option>
                                       ))}
                                     </select>

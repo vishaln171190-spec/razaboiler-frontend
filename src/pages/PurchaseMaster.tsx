@@ -40,6 +40,9 @@ const PurchaseMaster = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [companySearch, setCompanySearch] = useState("");
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [editReason, setEditReason] = useState("");
 
   const [formData, setFormData] = useState({
     companyid: "",
@@ -98,6 +101,18 @@ const PurchaseMaster = () => {
     loadAll();
   }, [canView]);
 
+  useEffect(() => {
+    if (editingId) return;
+    setFormData((prev) => ({ ...prev, purchasedate: selectedDate }));
+  }, [selectedDate, editingId]);
+
+  useEffect(() => {
+    const selected = companies.find((c) => String(c.id) === String(formData.companyid));
+    if (selected) {
+      setCompanySearch(selected.company_name || "");
+    }
+  }, [formData.companyid, companies]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId && !canEdit) {
@@ -110,6 +125,10 @@ const PurchaseMaster = () => {
     }
     if (!formData.companyid || !formData.purchasedate || !formData.purchaseqty || !formData.rateofpurchase) {
       showToast("Please fill in required fields", "error");
+      return;
+    }
+    if (editingId && !editReason.trim()) {
+      showToast("Reason is required while editing", "error");
       return;
     }
     setSaving(true);
@@ -149,13 +168,14 @@ const PurchaseMaster = () => {
       setEditingId(null);
       setFormData({
         companyid: "",
-        purchasedate: new Date().toISOString().split("T")[0],
+        purchasedate: selectedDate,
         purchaseqty: "",
         parchaseweight: "",
         rateofpurchase: "",
         status: "open",
         created_by: "1",
       });
+      setEditReason("");
       await loadAll();
     } catch (err) {
       console.error(err);
@@ -203,10 +223,11 @@ const PurchaseMaster = () => {
       status: row.status || "open",
       created_by: "1",
     });
+    setEditReason("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const filtered = purchases.filter((p) => p.purchasedate === selectedDate);
+  const filtered = purchases.filter((p) => (p.purchasedate || "").split("T")[0] === selectedDate);
 
   const dayTotals = useMemo(() => {
     return filtered.reduce(
@@ -225,6 +246,11 @@ const PurchaseMaster = () => {
     const c = companies.find((x) => String(x.id) === String(id));
     return c?.company_name || `Company ${id}`;
   };
+
+  const formCompanies = useMemo(() => {
+    const q = companySearch.trim().toLowerCase();
+    return companies.filter((c) => !q || (c.company_name || "").toLowerCase().includes(q));
+  }, [companies, companySearch]);
 
   if (loading) {
     return (
@@ -308,31 +334,45 @@ const PurchaseMaster = () => {
               <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
                 Company
               </label>
-              <select
-                value={formData.companyid}
-                onChange={(e) => setFormData({ ...formData, companyid: e.target.value })}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                required
-              >
-                <option value="">Select Company</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.company_name || `Company ${c.id}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                Purchase Date
-              </label>
               <input
-                type="date"
-                value={formData.purchasedate}
-                onChange={(e) => setFormData({ ...formData, purchasedate: e.target.value })}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                required
+                type="text"
+                value={companySearch}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCompanySearch(value);
+                  setFormData((prev) => ({ ...prev, companyid: "" }));
+                  setShowCompanyDropdown(Boolean(value.trim()));
+                }}
+                onFocus={() => {
+                  if (companySearch.trim()) setShowCompanyDropdown(true);
+                }}
+                placeholder="Search company..."
+                className="mb-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
               />
+              {showCompanyDropdown && companySearch.trim() && (
+              <div className="max-h-36 overflow-auto rounded-lg border border-slate-200">
+                {formCompanies.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-400">No company found</p>
+                ) : (
+                  formCompanies.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, companyid: String(c.id) }));
+                        setCompanySearch(c.company_name || "");
+                        setShowCompanyDropdown(false);
+                      }}
+                      className={`block w-full px-3 py-2 text-left text-sm hover:bg-blue-50 ${
+                        String(formData.companyid) === String(c.id) ? "bg-blue-100 text-blue-700 font-semibold" : ""
+                      }`}
+                    >
+                      {c.company_name || `Company ${c.id}`}
+                    </button>
+                  ))
+                )}
+              </div>
+              )}
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
@@ -382,6 +422,21 @@ const PurchaseMaster = () => {
                 <option value="closed">Closed</option>
               </select>
             </div>
+            {editingId && (
+              <div className="md:col-span-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                  Reason For Edit
+                </label>
+                <input
+                  type="text"
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  placeholder="Enter reason"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                  required
+                />
+              </div>
+            )}
             <div className="md:col-span-3 flex items-center justify-between">
               {editingId && (
                 <button
@@ -390,13 +445,14 @@ const PurchaseMaster = () => {
                     setEditingId(null);
                     setFormData({
                       companyid: "",
-                      purchasedate: new Date().toISOString().split("T")[0],
+                      purchasedate: selectedDate,
                       purchaseqty: "",
                       parchaseweight: "",
                       rateofpurchase: "",
                       status: "open",
                       created_by: "1",
                     });
+                    setEditReason("");
                   }}
                   className="text-sm text-slate-500 underline"
                 >

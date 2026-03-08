@@ -4,7 +4,7 @@ import { getAuthUser, hasPermission, hasRole } from "../utils/auth";
 import { API_BASE_URL } from "../../constants";
 import { Calendar, Edit, Eye, EyeIcon } from "lucide-react";
 
-type Customer = { id: number | string; name?: string };
+type Customer = { id: number | string; name?: string; type?: "Hotel" | "Shop" };
 type Item = { id: number | string; name?: string };
 type Sale = {
   id: number | string;
@@ -47,6 +47,11 @@ const SalesMaster = () => {
   const [saleSearch, setSaleSearch] = useState("");
   const [draftErrors, setDraftErrors] = useState<{ itemid?: string; itemqty?: string }>({});
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [customerTab, setCustomerTab] = useState<"Hotel" | "Shop">("Hotel");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [editReason, setEditReason] = useState("");
+  const [viewEditReason, setViewEditReason] = useState("");
   const [formData, setFormData] = useState({
     customerid: "",
     saledate: new Date().toISOString().split("T")[0],
@@ -127,6 +132,10 @@ const SalesMaster = () => {
     return list.map((c) => ({
       id: c.id ?? c.customer_id ?? c._id ?? Math.random().toString(36).slice(2),
       name: c.customer_name || c.name || "",
+      type:
+        c.customer_typeid === 1 || c.customer_typeid === "1" || c.customer_type === "Hotel"
+          ? "Hotel"
+          : "Shop",
     })) as Customer[];
   };
 
@@ -199,6 +208,18 @@ const SalesMaster = () => {
     loadAll();
   }, [canView]);
 
+  useEffect(() => {
+    if (editingId) return;
+    setFormData((prev) => ({ ...prev, saledate: selectedDate }));
+  }, [selectedDate, editingId]);
+
+  useEffect(() => {
+    const selected = customers.find((c) => String(c.id) === String(formData.customerid));
+    if (selected) {
+      setCustomerSearch(selected.name || "");
+    }
+  }, [formData.customerid, customers]);
+
   const computeTotalSale = (item: SaleItem) => {
     let total = (Number(item.itemqty) * Number(item.salerate));
     if (item.discounttype === "percent") {
@@ -229,6 +250,10 @@ const SalesMaster = () => {
     }
     if (!formData.customerid || !formData.saledate) {
       showToast("Please fill in required fields", "error");
+      return;
+    }
+    if (editingId && !editReason.trim()) {
+      showToast("Reason is required while editing", "error");
       return;
     }
     if (saleItems.length === 0) {
@@ -265,12 +290,13 @@ const SalesMaster = () => {
       setEditingId(null);
       setFormData({
         customerid: "",
-        saledate: new Date().toISOString().split("T")[0],
+        saledate: selectedDate,
         salestatus: "open",
         created_by: "1",
       });
       setSaleItems([]);
       setShowItemForm(false);
+      setEditReason("");
       await loadAll();
     } catch (err) {
       console.error(err);
@@ -286,9 +312,39 @@ const SalesMaster = () => {
     setViewSaleTotal(row.total_sale ?? 0);
     const items = await fetchSaleItems(row.id);
     setViewSaleItems(items);
+    setViewEditReason("");
     setViewModalOpen(true);
   };
 
+  const formCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase();
+    return customers.filter((c) => {
+      const typeMatch = (c.type || "Shop") === customerTab;
+      const searchMatch = !q || (c.name || "").toLowerCase().includes(q);
+      return typeMatch && searchMatch;
+    });
+  }, [customers, customerSearch, customerTab]);
+
+  const filteredSales = useMemo(() => {
+    const q = saleSearch.trim().toLowerCase();
+    return sales.filter((row) => {
+      const sameDate = (row.saledate || "").split("T")[0] === selectedDate;
+      if (!sameDate) return false;
+      const customer = customers.find((c) => String(c.id) === String(row.customerid));
+      const sameType = (customer?.type || "Shop") === customerTab;
+      if (!sameType) return false;
+      if (!q) return true;
+      const name = (customer?.name || "").toLowerCase();
+      const status = (row.salestatus || "").toLowerCase();
+      const date = (row.saledate || "").split("T")[0].toLowerCase();
+      return name.includes(q) || status.includes(q) || date.includes(q);
+    });
+  }, [sales, selectedDate, customerTab, saleSearch, customers]);
+
+  const filteredSalesTotal = useMemo(
+    () => filteredSales.reduce((sum, row: any) => sum + Number(row.total_sale || 0), 0),
+    [filteredSales]
+  );
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
@@ -302,21 +358,6 @@ const SalesMaster = () => {
 
   if (!canView) {
     return <div className="p-8 text-center text-slate-500">You do not have permission to view Sales Master.</div>;
-  }
-
-  async function setSelectedSale(row: any) {
-    const saleItems = fetchSaleItems(row.id);
-    setFormData({
-      customerid: row.customerid,
-      saledate: row.saledate,
-      salestatus: row.salestatus,
-      created_by: "1",
-    });
-    setSaleItems(await saleItems);
-  }
-
-  function setActiveSaleId(id: string | number) {
-    throw new Error("Function not implemented.");
   }
 
   return (
@@ -349,14 +390,8 @@ const SalesMaster = () => {
                     onChange={async (e) => {
                       const newDate = e.target.value;
                       setSelectedDate(newDate);
-                     
-                      let filteredSale = await fetchSales(newDate);
-                      setSales(filteredSale);
-                      if (filteredSale.length > 0) {
-                        setActiveSaleId(filteredSale[0].id);
-                      } else {
-                        setActiveSaleId(null);
-                      }
+                      const nextSales = await fetchSales(newDate);
+                      setSales(nextSales);
                     }}
                     className="h-10 w-44 rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-semibold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
                   />
@@ -370,19 +405,67 @@ const SalesMaster = () => {
             <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <h2 className="text-sm font-bold uppercase tracking-widest text-slate-600">{editingId ? "Update Sale" : "Create Sale"}</h2>
             </div>
+            <div className="px-6 pt-4">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 p-1 w-fit">
+                {(["Hotel", "Shop"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => {
+                      setCustomerTab(tab);
+                      setFormData((prev) => ({ ...prev, customerid: "" }));
+                    }}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-full ${
+                      customerTab === tab ? "bg-emerald-600 text-white" : "text-slate-600"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
             <form onSubmit={handleSave} className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Customer</label>
-                <select value={formData.customerid} onChange={e => setFormData({ ...formData, customerid: e.target.value })} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none" required>
-                  <option value="">Select Customer</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name || `Customer ${c.id}`}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Sale Date</label>
-                <input type="date" value={formData.saledate} onChange={e => setFormData({ ...formData, saledate: e.target.value })} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none" required />
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCustomerSearch(value);
+                    setFormData((prev) => ({ ...prev, customerid: "" }));
+                    setShowCustomerDropdown(Boolean(value.trim()));
+                  }}
+                  onFocus={() => {
+                    if (customerSearch.trim()) setShowCustomerDropdown(true);
+                  }}
+                  placeholder="Search customer..."
+                  className="mb-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                />
+                {showCustomerDropdown && customerSearch.trim() && (
+                <div className="max-h-36 overflow-auto rounded-lg border border-slate-200">
+                  {formCustomers.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-slate-400">No customer found</p>
+                  ) : (
+                    formCustomers.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, customerid: String(c.id) }));
+                          setCustomerSearch(c.name || "");
+                          setShowCustomerDropdown(false);
+                        }}
+                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 ${
+                          String(formData.customerid) === String(c.id) ? "bg-emerald-100 text-emerald-700 font-semibold" : ""
+                        }`}
+                      >
+                        {c.name || `Customer ${c.id}`}
+                      </button>
+                    ))
+                  )}
+                </div>
+                )}
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Sale Status</label>
@@ -392,6 +475,19 @@ const SalesMaster = () => {
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
+              {editingId && (
+                <div className="md:col-span-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Reason For Edit</label>
+                  <input
+                    type="text"
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="Enter reason"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                    required
+                  />
+                </div>
+              )}
               <div className="md:col-span-3">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sale Items</p>
@@ -469,7 +565,7 @@ const SalesMaster = () => {
         )}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50/80">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sales</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{customerTab} Sales</p>
             <input type="text" value={saleSearch} onChange={e => setSaleSearch(e.target.value)} placeholder="Filter by customer, status, or date" className="h-9 w-full sm:w-72 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-emerald-500" />
           </div>
           <div className="overflow-x-auto">
@@ -484,12 +580,12 @@ const SalesMaster = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sales.length === 0 ? (
+                {filteredSales.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="py-24 text-center text-slate-400">No sales found.</td>
                   </tr>
                 ) : (
-                  sales.map((row) => (
+                  filteredSales.map((row) => (
                     <tr key={row.id} className="group hover:bg-emerald-50/30 transition-colors">
                       <td className="px-5 py-3 font-bold text-slate-800">{customers.find(c => String(c.id) === String(row.customerid))?.name || `Customer ${row.customerid}`}</td>
                       <td className="px-5 py-3">
@@ -507,7 +603,7 @@ const SalesMaster = () => {
               <tfoot className="bg-slate-900 text-white shadow-2xl">
                 <tr>
                   <td className="px-5 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">Total Sale Amount</td>
-                  <td colSpan={4} className="px-5 py-4 text-right font-bold">{totalSaleAmount.toFixed(2)}</td>
+                  <td colSpan={4} className="px-5 py-4 text-right font-bold">{filteredSalesTotal.toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -522,6 +618,13 @@ const SalesMaster = () => {
             <div className="mb-4 flex flex-col gap-1 text-sm text-slate-700">
               <div><span className="font-semibold">Sale Date:</span> {viewSaleDate}</div>
               <div><span className="font-semibold">Total Sale Amount:</span> {computeViewTotal(viewSaleItems, viewEditRows).toFixed(2)}</div>
+              <input
+                type="text"
+                value={viewEditReason}
+                onChange={(e) => setViewEditReason(e.target.value)}
+                placeholder="Reason for edit"
+                className="mt-2 rounded border border-slate-200 px-3 py-2 text-sm"
+              />
             </div>
             <table className="w-full text-left text-sm border-collapse mb-4">
               <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -571,6 +674,10 @@ const SalesMaster = () => {
                       }));
                     };
                     const handleSave = async () => {
+                      if (!viewEditReason.trim()) {
+                        showToast("Reason is required while editing", "error");
+                        return;
+                      }
                       try {
                         const res = await fetch(`${API_BASE_URL}/saleitems/${it.id}`, {
                           method: "PUT",
@@ -590,6 +697,7 @@ const SalesMaster = () => {
                         }));
                         setViewSaleItems(items => items.map((x, i) => i === idx ? { ...x, itemweight: rowState.editWeight, salerate: rowState.editRate } : x));
                         showToast("Sale item updated", "success");
+                        setViewEditReason("");
                       } catch (err) {
                         showToast("Failed to update sale item", "error");
                       }
@@ -636,3 +744,11 @@ const SalesMaster = () => {
 };
 
 export default SalesMaster;
+
+
+
+
+
+
+
+

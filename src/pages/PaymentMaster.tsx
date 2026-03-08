@@ -20,6 +20,7 @@ type Entity = {
   name?: string;
   customer_name?: string;
   company_name?: string;
+  type?: "Hotel" | "Shop";
 };
 
 const today = new Date().toISOString().split("T")[0];
@@ -43,7 +44,11 @@ const PaymentMaster = () => {
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [nameFilter, setNameFilter] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [entitySearch, setEntitySearch] = useState("");
+  const [showEntityDropdown, setShowEntityDropdown] = useState(false);
+  const [customerCategory, setCustomerCategory] = useState<"Hotel" | "Shop">("Hotel");
+  const [editReason, setEditReason] = useState("");
 
   const [filters, setFilters] = useState({
     usertype: "all",
@@ -117,6 +122,10 @@ const PaymentMaster = () => {
     name: raw.name ?? raw.customer_name ?? raw.company_name ?? "",
     customer_name: raw.customer_name,
     company_name: raw.company_name,
+    type:
+      raw.customer_typeid === 1 || raw.customer_typeid === "1" || raw.customer_type === "Hotel"
+        ? "Hotel"
+        : "Shop",
   });
 
   const fetchCustomers = async () => {
@@ -192,6 +201,19 @@ const PaymentMaster = () => {
     loadAll();
   }, [canView, selectedDate, filters.usertype, filters.paymenttype, filters.paymentmode, nameFilter]);
 
+  useEffect(() => {
+    if (editingId) return;
+    setFormData((prev) => ({ ...prev, paymentdate: selectedDate || today }));
+  }, [selectedDate, editingId]);
+
+  useEffect(() => {
+    const source = formData.usertype === "company" ? companies : customers;
+    const selected = source.find((e) => String(e.id) === String(formData.userid));
+    if (selected) {
+      setEntitySearch(selected.name || selected.customer_name || selected.company_name || "");
+    }
+  }, [formData.userid, formData.usertype, customers, companies]);
+
   const getEntityName = (usertype: string, id: number | string, fallbackName?: string) => {
     const source = String(usertype).toLowerCase() === "company" ? companies : customers;
     const found = source.find((e) => String(e.id) === String(id));
@@ -210,6 +232,10 @@ const PaymentMaster = () => {
     }
     if (!formData.userid || !formData.paymentamount || !formData.paymentdate) {
       showToast("Please fill in required fields", "error");
+      return;
+    }
+    if (editingId && !editReason.trim()) {
+      showToast("Reason is required while editing", "error");
       return;
     }
 
@@ -247,6 +273,7 @@ const PaymentMaster = () => {
         created_by: "1",
         updated_by: "1",
       });
+      setEditReason("");
       await loadAll();
     } catch (err) {
       console.error(err);
@@ -300,6 +327,7 @@ const PaymentMaster = () => {
         created_by: "1",
         updated_by: "1",
       });
+      setEditReason("");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       console.error(err);
@@ -309,27 +337,135 @@ const PaymentMaster = () => {
     }
   };
 
-  const formEntities = useMemo(
-    () => (formData.usertype === "company" ? companies : customers),
-    [formData.usertype, companies, customers]
-  );
+  const formEntities = useMemo(() => {
+    const q = entitySearch.trim().toLowerCase();
+    const source = formData.usertype === "company" ? companies : customers;
+    return source.filter((entity) => {
+      const typeMatch =
+        formData.usertype === "company" ? true : (entity.type || "Shop") === customerCategory;
+      const name = (entity.name || entity.customer_name || entity.company_name || "").toLowerCase();
+      const searchMatch = !q || name.includes(q);
+      return typeMatch && searchMatch;
+    });
+  }, [formData.usertype, companies, customers, entitySearch, customerCategory]);
 
   const filteredPayments = useMemo(() => payments, [payments]);
-
-  const totals = useMemo(
-    () =>
-      filteredPayments.reduce(
-        (acc, row) => {
-          const amount = Number(row.paymentamount || 0);
-          if (String(row.paymenttype).toLowerCase() === "received") acc.received += amount;
-          else acc.paid += amount;
-          acc.total += amount;
-          return acc;
-        },
-        { paid: 0, received: 0, total: 0 }
-      ),
+  const paidPayments = useMemo(
+    () => filteredPayments.filter((row) => String(row.paymenttype).toLowerCase() === "paid"),
     [filteredPayments]
   );
+  const receivedPayments = useMemo(
+    () => filteredPayments.filter((row) => String(row.paymenttype).toLowerCase() === "received"),
+    [filteredPayments]
+  );
+
+  const renderPaymentTable = (title: string, rows: Payment[]) => {
+    const rowTotals = rows.reduce(
+      (acc, row) => {
+        const amount = Number(row.paymentamount || 0);
+        if (String(row.paymenttype).toLowerCase() === "received") acc.received += amount;
+        else acc.paid += amount;
+        acc.total += amount;
+        return acc;
+      },
+      { paid: 0, received: 0, total: 0 }
+    );
+
+    return (
+      <div className="overflow-x-auto">
+        <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-black uppercase tracking-widest text-slate-500">
+          {title}
+        </div>
+        <table className="w-full border-collapse text-left text-sm">
+          <thead className="bg-slate-50/80 uppercase text-[10px] font-black tracking-widest text-slate-400 border-b border-slate-200">
+            <tr>
+              <th className="px-5 py-4">Type</th>
+              <th className="px-5 py-4">Name</th>
+              <th className="px-5 py-4">Payment Type</th>
+              <th className="px-5 py-4">Mode</th>
+              <th className="px-5 py-4">Transaction/Cheque</th>
+              <th className="px-5 py-4">Date</th>
+              <th className="px-5 py-4 text-right">Amount</th>
+              {(canEdit || canDelete) && <th className="px-5 py-4 text-center">Action</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={canEdit || canDelete ? 8 : 7} className="py-14 text-center text-slate-400">
+                  No {title.toLowerCase()} entries.
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <tr key={row.id} className="group hover:bg-emerald-50/30 transition-colors">
+                  <td className="px-5 py-3 font-semibold capitalize text-slate-700">{row.usertype}</td>
+                  <td className="px-5 py-3 font-bold text-slate-800">
+                    {getEntityName(row.usertype, row.userid, row.name)}
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700">
+                      {row.paymenttype}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 capitalize text-slate-700">{row.paymentmode}</td>
+                  <td className="px-5 py-3 text-slate-600">{row.transaction_cheque_no || "-"}</td>
+                  <td className="px-5 py-3 text-slate-700 font-semibold">{row.paymentdate?.split("T")[0] || ""}</td>
+                  <td className="px-5 py-3 text-right tabular-nums font-black text-slate-900">
+                    Rs. {Number(row.paymentamount || 0).toFixed(2)}
+                  </td>
+                  {(canEdit || canDelete) && (
+                    <td className="px-5 py-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {canEdit && (
+                          <button
+                            onClick={() => startEdit(row)}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <ClipboardEdit size={16} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(row.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+          {rows.length > 0 && (
+            <tfoot className="bg-slate-900 text-white shadow-2xl">
+              <tr>
+                <td className="px-5 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">
+                  Totals
+                </td>
+                <td colSpan={3}></td>
+                <td className="px-5 py-4 text-right text-xs font-semibold text-rose-300">
+                  Paid: Rs. {rowTotals.paid.toFixed(2)}
+                </td>
+                <td className="px-5 py-4 text-right text-xs font-semibold text-emerald-300">
+                  Received: Rs. {rowTotals.received.toFixed(2)}
+                </td>
+                <td className="px-5 py-4 text-right tabular-nums text-xl font-black text-emerald-400">
+                  Rs. {rowTotals.total.toFixed(2)}
+                </td>
+                {(canEdit || canDelete) && <td></td>}
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+    );
+  };
 
  if (loading) {
     return (
@@ -382,7 +518,7 @@ const PaymentMaster = () => {
           </div>
           <button
             type="button"
-            onClick={() => setSelectedDate("")}
+            onClick={() => setSelectedDate(today)}
             className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
           >
             Clear Date
@@ -416,33 +552,67 @@ const PaymentMaster = () => {
                   <option value="company">Company</option>
                 </select>
               </div>
+              {formData.usertype === "customer" && (
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                    Customer Type
+                  </label>
+                  <select
+                    value={customerCategory}
+                    onChange={(e) => {
+                      setCustomerCategory(e.target.value as "Hotel" | "Shop");
+                      setFormData((prev) => ({ ...prev, userid: "" }));
+                    }}
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                  >
+                    <option value="Hotel">Hotel</option>
+                    <option value="Shop">Shop</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
                   {formData.usertype === "customer" ? "Customer" : "Company"}
                 </label>
-                <select
-                  value={formData.userid}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, userid: e.target.value }))}
-                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  required
-                >
-                  <option value="">Select</option>
-                  {formEntities.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name || e.customer_name || e.company_name || `${formData.usertype} ${e.id}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Payment Date</label>
                 <input
-                  type="date"
-                  value={formData.paymentdate}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, paymentdate: e.target.value }))}
-                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  required
+                  type="text"
+                  value={entitySearch}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEntitySearch(value);
+                    setFormData((prev) => ({ ...prev, userid: "" }));
+                    setShowEntityDropdown(Boolean(value.trim()));
+                  }}
+                  onFocus={() => {
+                    if (entitySearch.trim()) setShowEntityDropdown(true);
+                  }}
+                  placeholder={`Search ${formData.usertype}...`}
+                  className="mb-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
                 />
+                {showEntityDropdown && entitySearch.trim() && (
+                <div className="max-h-36 overflow-auto rounded-lg border border-slate-200">
+                  {formEntities.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-slate-400">No record found</p>
+                  ) : (
+                    formEntities.map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, userid: String(e.id) }));
+                          setEntitySearch(e.name || e.customer_name || e.company_name || "");
+                          setShowEntityDropdown(false);
+                        }}
+                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 ${
+                          String(formData.userid) === String(e.id) ? "bg-emerald-100 text-emerald-700 font-semibold" : ""
+                        }`}
+                      >
+                        {e.name || e.customer_name || e.company_name || `${formData.usertype} ${e.id}`}
+                      </button>
+                    ))
+                  )}
+                </div>
+                )}
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Amount</label>
@@ -489,6 +659,21 @@ const PaymentMaster = () => {
                   className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
                 />
               </div>
+              {editingId && (
+                <div className="md:col-span-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                    Reason For Edit
+                  </label>
+                  <input
+                    type="text"
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="Enter reason"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                    required
+                  />
+                </div>
+              )}
               <div className="md:col-span-3 flex items-center justify-between">
                 {editingId && (
                   <button
@@ -502,10 +687,11 @@ const PaymentMaster = () => {
                         paymenttype: "paid",
                         paymentmode: "online",
                         transaction_cheque_no: "",
-                        paymentdate: today,
+                        paymentdate: selectedDate || today,
                         created_by: "1",
                         updated_by: "1",
                       });
+                      setEditReason("");
                     }}
                     className="text-sm text-slate-500 underline"
                   >
@@ -563,95 +749,8 @@ const PaymentMaster = () => {
               className="h-9 flex-1 min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-emerald-500"
             />
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-slate-50/80 uppercase text-[10px] font-black tracking-widest text-slate-400 border-b border-slate-200">
-                <tr>
-                  <th className="px-5 py-4">Type</th>
-                  <th className="px-5 py-4">Name</th>
-                  <th className="px-5 py-4">Payment Type</th>
-                  <th className="px-5 py-4">Mode</th>
-                  <th className="px-5 py-4">Transaction/Cheque</th>
-                  <th className="px-5 py-4">Date</th>
-                  <th className="px-5 py-4 text-right">Amount</th>
-                  {(canEdit || canDelete) && <th className="px-5 py-4 text-center">Action</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredPayments.length === 0 ? (
-                  <tr>
-                    <td colSpan={canEdit || canDelete ? 8 : 7} className="py-24 text-center text-slate-400">
-                      No payments found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredPayments.map((row) => (
-                    <tr key={row.id} className="group hover:bg-emerald-50/30 transition-colors">
-                      <td className="px-5 py-3 font-semibold capitalize text-slate-700">{row.usertype}</td>
-                      <td className="px-5 py-3 font-bold text-slate-800">
-                        {getEntityName(row.usertype, row.userid, row.name)}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700">
-                          {row.paymenttype}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 capitalize text-slate-700">{row.paymentmode}</td>
-                      <td className="px-5 py-3 text-slate-600">{row.transaction_cheque_no || "-"}</td>
-                      <td className="px-5 py-3 text-slate-700 font-semibold">{row.paymentdate?.split("T")[0] || ""}</td>
-                      <td className="px-5 py-3 text-right tabular-nums font-black text-slate-900">
-                        Rs. {Number(row.paymentamount || 0).toFixed(2)}
-                      </td>
-                      {(canEdit || canDelete) && (
-                        <td className="px-5 py-3 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            {canEdit && (
-                              <button
-                                onClick={() => startEdit(row)}
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                title="Edit"
-                              >
-                                <ClipboardEdit size={16} />
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button
-                                onClick={() => handleDelete(row.id)}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-              {filteredPayments.length > 0 && (
-                <tfoot className="bg-slate-900 text-white shadow-2xl">
-                  <tr>
-                    <td className="px-5 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">
-                      Totals
-                    </td>
-                    <td colSpan={3}></td>
-                    <td className="px-5 py-4 text-right text-xs font-semibold text-rose-300">
-                      Paid: Rs. {totals.paid.toFixed(2)}
-                    </td>
-                    <td className="px-5 py-4 text-right text-xs font-semibold text-emerald-300">
-                      Received: Rs. {totals.received.toFixed(2)}
-                    </td>
-                    <td className="px-5 py-4 text-right tabular-nums text-xl font-black text-emerald-400">
-                      Rs. {totals.total.toFixed(2)}
-                    </td>
-                    {(canEdit || canDelete) && <td></td>}
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
+          {renderPaymentTable("Paid", paidPayments)}
+          {renderPaymentTable("Received", receivedPayments)}
         </div>
       </main>
     </div>

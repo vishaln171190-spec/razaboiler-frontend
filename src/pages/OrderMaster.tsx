@@ -14,7 +14,7 @@ import { getCookie } from "../utils/cookieHelper";
 import { getAuthUser, hasPermission, hasRole } from "../utils/auth";
 import { API_BASE_URL } from "../../constants";
 
-type Customer = { id: number | string; name?: string };
+type Customer = { id: number | string; name?: string; type?: "Hotel" | "Shop" };
 type Item = { id: number | string; name?: string };
 type OrderItem = {
   id?: number | string;
@@ -55,6 +55,11 @@ const OrderMaster = () => {
   const [viewSavingId, setViewSavingId] = useState<string | number | null>(null);
   const [orderSearch, setOrderSearch] = useState("");
   const [draftErrors, setDraftErrors] = useState<{ itemid?: string; itemweight?: string }>({});
+  const [customerTab, setCustomerTab] = useState<"Hotel" | "Shop">("Hotel");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [editReason, setEditReason] = useState("");
+  const [viewEditReason, setViewEditReason] = useState("");
 
   const [formData, setFormData] = useState({
     customerid: "",
@@ -89,6 +94,10 @@ const OrderMaster = () => {
     return list.map((c) => ({
       id: c.id ?? c.customer_id ?? c._id ?? Math.random().toString(36).slice(2),
       name: c.customer_name || c.name || "",
+      type:
+        c.customer_typeid === 1 || c.customer_typeid === "1" || c.customer_type === "Hotel"
+          ? "Hotel"
+          : "Shop",
     })) as Customer[];
   };
 
@@ -171,6 +180,18 @@ const OrderMaster = () => {
     loadAll();
   }, [canView]);
 
+  useEffect(() => {
+    if (editingId) return;
+    setFormData((prev) => ({ ...prev, orderdate: selectedDate }));
+  }, [selectedDate, editingId]);
+
+  useEffect(() => {
+    const selected = customers.find((c) => String(c.id) === String(formData.customerid));
+    if (selected) {
+      setCustomerSearch(selected.name || "");
+    }
+  }, [formData.customerid, customers]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId && !canEdit) {
@@ -183,6 +204,10 @@ const OrderMaster = () => {
     }
     if (!formData.customerid || !formData.orderdate) {
       showToast("Please fill in required fields", "error");
+      return;
+    }
+    if (editingId && !editReason.trim()) {
+      showToast("Reason is required while editing", "error");
       return;
     }
     if (orderItems.length === 0) {
@@ -214,13 +239,14 @@ const OrderMaster = () => {
       setEditingId(null);
       setFormData({
         customerid: "",
-        orderdate: new Date().toISOString().split("T")[0],
+        orderdate: selectedDate,
         orderstatus: "intransit",
         created_by: "1",
       });
       setOrderItems([]);
       setDraftItem({ itemid: "", itemweight: "", status: "ordered" });
       setShowItemForm(false);
+      setEditReason("");
       await loadAll();
     } catch (err) {
       console.error(err);
@@ -283,6 +309,7 @@ const OrderMaster = () => {
     );
     setDraftItem({ itemid: "", itemweight: "", status: "ordered" });
     setShowItemForm(true);
+    setEditReason("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -342,10 +369,15 @@ const OrderMaster = () => {
     setViewOpen(false);
     setViewOrderId(null);
     setViewItems([]);
+    setViewEditReason("");
   };
 
   const updateViewItem = async (it: OrderItem) => {
     if (!viewOrderId || !it.id) return;
+    if (!viewEditReason.trim()) {
+      showToast("Reason is required while editing", "error");
+      return;
+    }
     setViewSavingId(it.id);
     try {
       const payload = {
@@ -362,6 +394,7 @@ const OrderMaster = () => {
       });
       if (!res.ok) throw new Error("Update failed");
       showToast("Order item updated", "success");
+      setViewEditReason("");
       await loadAll();
     } catch (err) {
       console.error(err);
@@ -400,19 +433,32 @@ const OrderMaster = () => {
   };
 
   const filtered = orders.filter((o) => o.orderdate?.split("T")[0] === selectedDate);
+  const filteredByTab = filtered.filter((row) => {
+    const found = customers.find((c) => String(c.id) === String(row.customerid));
+    return (found?.type || "Shop") === customerTab;
+  });
   const filteredOrders = useMemo(() => {
     const q = orderSearch.trim().toLowerCase();
-    if (!q) return filtered;
-    return filtered.filter((row) => {
+    if (!q) return filteredByTab;
+    return filteredByTab.filter((row) => {
       const customer = getCustomerName(row.customerid).toLowerCase();
       const status = (row.orderstatus || "").toLowerCase();
       const date = (row.orderdate || "").split("T")[0].toLowerCase();
       return customer.includes(q) || status.includes(q) || date.includes(q);
     });
-  }, [filtered, orderSearch, customers]);
+  }, [filteredByTab, orderSearch, customers]);
+
+  const formCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase();
+    return customers.filter((c) => {
+      const typeMatch = (c.type || "Shop") === customerTab;
+      const searchMatch = !q || (c.name || "").toLowerCase().includes(q);
+      return typeMatch && searchMatch;
+    });
+  }, [customers, customerTab, customerSearch]);
 
   const dayTotals = useMemo(() => {
-    return filtered.reduce(
+    return filteredByTab.reduce(
       (acc, row) => {
         const weight = (row.items || []).reduce((sum, it) => sum + Number(it.itemweight || 0), 0);
         acc.totalWeight += weight;
@@ -421,7 +467,7 @@ const OrderMaster = () => {
       },
       { totalWeight: 0, totalItems: 0 }
     );
-  }, [filtered]);
+  }, [filteredByTab]);
 
   if (loading) {
     return (
@@ -501,36 +547,69 @@ const OrderMaster = () => {
               {editingId ? "Update Order" : "Create Order"}
             </h2>
           </div>
+          <div className="px-6 pt-4">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 p-1 w-fit">
+              {(["Hotel", "Shop"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => {
+                    setCustomerTab(tab);
+                    setFormData((prev) => ({ ...prev, customerid: "" }));
+                  }}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-full ${
+                    customerTab === tab ? "bg-blue-600 text-white" : "text-slate-600"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
           <form onSubmit={handleSave} className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
                 Customer
               </label>
-              <select
-                value={formData.customerid}
-                onChange={(e) => setFormData({ ...formData, customerid: e.target.value })}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                required
-              >
-                <option value="">Select Customer</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name || `Customer ${c.id}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                Order Date
-              </label>
-              <input
-                type="date"
-                value={formData.orderdate}
-                onChange={(e) => setFormData({ ...formData, orderdate: e.target.value })}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                required
-              />
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => {
+                  const value = e.target.value;
+                  setCustomerSearch(value);
+                  setFormData((prev) => ({ ...prev, customerid: "" }));
+                  setShowCustomerDropdown(Boolean(value.trim()));
+                  }}
+                  onFocus={() => {
+                    if (customerSearch.trim()) setShowCustomerDropdown(true);
+                  }}
+                  placeholder="Search customer..."
+                  className="mb-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                />
+              {showCustomerDropdown && customerSearch.trim() && (
+              <div className="max-h-36 overflow-auto rounded-lg border border-slate-200">
+                {formCustomers.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-400">No customer found</p>
+                ) : (
+                  formCustomers.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, customerid: String(c.id) }));
+                        setCustomerSearch(c.name || "");
+                        setShowCustomerDropdown(false);
+                      }}
+                      className={`block w-full px-3 py-2 text-left text-sm hover:bg-blue-50 ${
+                        String(formData.customerid) === String(c.id) ? "bg-blue-100 text-blue-700 font-semibold" : ""
+                      }`}
+                    >
+                      {c.name || `Customer ${c.id}`}
+                    </button>
+                  ))
+                )}
+              </div>
+              )}
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
@@ -547,6 +626,21 @@ const OrderMaster = () => {
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
+            {editingId && (
+              <div className="md:col-span-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
+                  Reason For Edit
+                </label>
+                <input
+                  type="text"
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  placeholder="Enter reason"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                  required
+                />
+              </div>
+            )}
             <div className="md:col-span-3">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Order Items</p>
@@ -688,13 +782,14 @@ const OrderMaster = () => {
                     setEditingId(null);
                     setFormData({
                       customerid: "",
-                      orderdate: new Date().toISOString().split("T")[0],
+                      orderdate: selectedDate,
                       orderstatus: "intransit",
                       created_by: "1",
                     });
                     setOrderItems([]);
                     setDraftItem({ itemid: "", itemweight: "", status: "ordered" });
                     setShowItemForm(false);
+                    setEditReason("");
                   }}
                   className="text-sm text-slate-500 underline"
                 >
@@ -716,7 +811,7 @@ const OrderMaster = () => {
 
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50/80">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Orders</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{customerTab} Orders</p>
             <input
               type="text"
               value={orderSearch}
@@ -845,9 +940,18 @@ const OrderMaster = () => {
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-600">Order Items</h3>
                 <p className="text-xs text-slate-400">Order ID: {viewOrderId}</p>
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={viewEditReason}
+                  onChange={(e) => setViewEditReason(e.target.value)}
+                  placeholder="Reason for edit"
+                  className="h-9 rounded-lg border border-slate-200 px-3 text-xs"
+                />
               <button onClick={closeViewItems} className="text-sm font-bold text-slate-500">
                 Close
               </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
