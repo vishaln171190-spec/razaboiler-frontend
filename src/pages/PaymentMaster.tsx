@@ -36,6 +36,7 @@ const PaymentMaster = () => {
   const canDelete = isAdmin || hasAnyPaymentPermission();
   const canMutate = canCreate || canEdit;
 
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -67,6 +68,9 @@ const PaymentMaster = () => {
     created_by: "1",
     updated_by: "1",
   });
+
+  // Tab state: 'paid' or 'received'
+  const [activeTab, setActiveTab] = useState<'paid' | 'received'>('paid');
 
   const showToast = (text: string, type: "success" | "error") => {
     setMsg({ text, type });
@@ -749,8 +753,25 @@ const PaymentMaster = () => {
               className="h-9 flex-1 min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-emerald-500"
             />
           </div>
-          {renderPaymentTable("Paid", paidPayments)}
-          {renderPaymentTable("Received", receivedPayments)}
+          {/* Tab buttons */}
+          <div className="flex gap-2 px-5 pt-4">
+            <button
+              type="button"
+              className={`px-6 py-2 rounded-t-lg font-bold text-sm border-b-2 transition-all ${activeTab === 'paid' ? 'border-emerald-600 text-emerald-700 bg-emerald-50' : 'border-transparent text-slate-500 bg-slate-100'}`}
+              onClick={() => setActiveTab('paid')}
+            >
+              Paid
+            </button>
+            <button
+              type="button"
+              className={`px-6 py-2 rounded-t-lg font-bold text-sm border-b-2 transition-all ${activeTab === 'received' ? 'border-emerald-600 text-emerald-700 bg-emerald-50' : 'border-transparent text-slate-500 bg-slate-100'}`}
+              onClick={() => setActiveTab('received')}
+            >
+              Received
+            </button>
+          </div>
+          {/* Payment table based on activeTab */}
+          {activeTab === 'paid' ? renderPaymentTable("Paid", paidPayments) : renderPaymentTable("Received", receivedPayments)}
         </div>
       </main>
     </div>
