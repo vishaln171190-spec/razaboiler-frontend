@@ -18,6 +18,7 @@ import { clearAuthUser, getAuthUser } from "./src/utils/auth";
 import { PermissionsProvider } from "./src/utils/PermissionsContext";
 import SalesReports from "./src/pages/SalesReports";
 import PurchaseReports from "./src/pages/PurchaseReports";
+import MaintenanceReports from "./src/pages/MaintenanceReports";
 
 function App() {
   const [user, setUser] = useState<any>(() => {
@@ -64,6 +65,7 @@ function App() {
           {route === "vehicles" && <VehicleMaster />}
           {route === "maintenance" && <MaintenanceMaster />}
           {route === "route-builder" && <RouteBuilder user={user} />}
+          {route === "maintenance-reports" && <MaintenanceReports />}
         </MainLayout>
       )}
     </PermissionsProvider>
