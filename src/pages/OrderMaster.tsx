@@ -20,6 +20,7 @@ type OrderItem = {
   id?: number | string;
   itemid: number | string;
   itemweight: number;
+  itemqty?: number;
   status?: string;
 };
 type Order = {
@@ -54,12 +55,13 @@ const OrderMaster = () => {
   const [viewItems, setViewItems] = useState<OrderItem[]>([]);
   const [viewSavingId, setViewSavingId] = useState<string | number | null>(null);
   const [orderSearch, setOrderSearch] = useState("");
-  const [draftErrors, setDraftErrors] = useState<{ itemid?: string; itemweight?: string }>({});
+  const [draftErrors, setDraftErrors] = useState<{ itemid?: string; itemweight?: string; itemqty?: string }>({});
   const [customerTab, setCustomerTab] = useState<"Hotel" | "Shop">("Hotel");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [editReason, setEditReason] = useState("");
   const [viewEditReason, setViewEditReason] = useState("");
+  const [selectedItemByOrder, setSelectedItemByOrder] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     customerid: "",
@@ -71,6 +73,7 @@ const OrderMaster = () => {
   const [draftItem, setDraftItem] = useState({
     itemid: "",
     itemweight: "",
+    itemqty: "",
     status: "ordered",
   });
 
@@ -115,6 +118,9 @@ const OrderMaster = () => {
     id: it.id ?? it.orderitem_id ?? it.order_item_id ?? it._id,
     itemid: it.itemid ?? it.item_id ?? it.id ?? it.item,
     itemweight: Number(it.itemweight ?? it.item_weight ?? it.weight ?? 0),
+    itemqty: Number(
+      it.itemqty ?? it.item_qty ?? it.qty ?? it.quantity ?? it.birds ?? it.itemweight ?? it.item_weight ?? it.weight ?? 0
+    ),
     status: it.status ?? it.itemstatus ?? it.state ?? "ordered",
   });
 
@@ -244,7 +250,7 @@ const OrderMaster = () => {
         created_by: "1",
       });
       setOrderItems([]);
-      setDraftItem({ itemid: "", itemweight: "", status: "ordered" });
+      setDraftItem({ itemid: "", itemweight: "", itemqty: "", status: "ordered" });
       setShowItemForm(false);
       setEditReason("");
       await loadAll();
@@ -299,26 +305,32 @@ const OrderMaster = () => {
       orderstatus: row.orderstatus || "intransit",
       created_by: "1",
     });
+    const selectedCustomer = customers.find((c) => String(c.id) === String(row.customerid));
+    if (selectedCustomer?.type) setCustomerTab(selectedCustomer.type);
     setOrderItems(
       (rowItems || []).map((it) => ({
         id: it.id,
         itemid: String(it.itemid),
         itemweight: Number(it.itemweight || 0),
+        itemqty: Number(it.itemqty || it.itemweight || 0),
         status: it.status || "ordered",
       }))
     );
-    setDraftItem({ itemid: "", itemweight: "", status: "ordered" });
+    setDraftItem({ itemid: "", itemweight: "", itemqty: "", status: "ordered" });
     setShowItemForm(true);
     setEditReason("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const addOrderItem = () => {
-    const nextErrors: { itemid?: string; itemweight?: string } = {};
+    const nextErrors: { itemid?: string; itemweight?: string; itemqty?: string } = {};
     if (!draftItem.itemid) {
       nextErrors.itemid = "Item is required";
     }
-    if (!draftItem.itemweight || Number(draftItem.itemweight) <= 0) {
+    if (customerTab === "Shop" && (!draftItem.itemqty || Number(draftItem.itemqty) <= 0)) {
+      nextErrors.itemqty = "Bird quantity is required";
+    }
+    if (customerTab === "Hotel" && (!draftItem.itemweight || Number(draftItem.itemweight) <= 0)) {
       nextErrors.itemweight = "Item weight is required";
     }
     if (Object.keys(nextErrors).length > 0) {
@@ -330,11 +342,13 @@ const OrderMaster = () => {
       {
         id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         itemid: draftItem.itemid,
-        itemweight: Number(draftItem.itemweight || 0),
+        itemweight:
+          customerTab === "Hotel" ? Number(draftItem.itemweight || 0) : Number(draftItem.itemqty || 0),
+        itemqty: customerTab === "Shop" ? Number(draftItem.itemqty || 0) : 0,
         status: draftItem.status || "ordered",
       },
     ]);
-    setDraftItem({ itemid: "", itemweight: "", status: "ordered" });
+    setDraftItem({ itemid: "", itemweight: "", itemqty: "", status: "ordered" });
     setDraftErrors({});
   };
 
@@ -356,6 +370,7 @@ const OrderMaster = () => {
           id: it.id,
           itemid: it.itemid,
           itemweight: Number(it.itemweight || 0),
+          itemqty: Number(it.itemqty || it.itemweight || 0),
           status: it.status || "ordered",
         }))
       );
@@ -443,10 +458,10 @@ const OrderMaster = () => {
     return filteredByTab.filter((row) => {
       const customer = getCustomerName(row.customerid).toLowerCase();
       const status = (row.orderstatus || "").toLowerCase();
-      const date = (row.orderdate || "").split("T")[0].toLowerCase();
-      return customer.includes(q) || status.includes(q) || date.includes(q);
+      const itemNames = (row.items || []).map((it) => getItemName(it.itemid).toLowerCase()).join(" ");
+      return customer.includes(q) || status.includes(q) || itemNames.includes(q);
     });
-  }, [filteredByTab, orderSearch, customers]);
+  }, [filteredByTab, orderSearch, customers, items]);
 
   const formCustomers = useMemo(() => {
     const q = customerSearch.trim().toLowerCase();
@@ -461,13 +476,16 @@ const OrderMaster = () => {
     return filteredByTab.reduce(
       (acc, row) => {
         const weight = (row.items || []).reduce((sum, it) => sum + Number(it.itemweight || 0), 0);
+        const qty = (row.items || []).reduce((sum, it) => sum + Number(it.itemqty || it.itemweight || 0), 0);
         acc.totalWeight += weight;
+        acc.totalQty += qty;
         acc.totalItems += (row.items || []).length;
         return acc;
       },
-      { totalWeight: 0, totalItems: 0 }
+      { totalWeight: 0, totalQty: 0, totalItems: 0 }
     );
   }, [filteredByTab]);
+  const hasActionColumn = canEdit || canDelete || canView;
 
   if (loading) {
     return (
@@ -530,7 +548,7 @@ const OrderMaster = () => {
               <div>
                 <p className="text-[9px] font-black uppercase tracking-widest text-blue-500">Today&#39;s Orders</p>
                 <p className="text-sm font-black text-blue-900 md:text-lg tabular-nums">
-                  {dayTotals.totalWeight.toFixed(2)} Kg
+                  {customerTab === "Shop" ? `${dayTotals.totalQty} Birds` : `${dayTotals.totalWeight.toFixed(2)} Kg`}
                 </p>
                 <p className="text-[10px] font-bold text-blue-700">{dayTotals.totalItems} Items</p>
               </div>
@@ -681,19 +699,38 @@ const OrderMaster = () => {
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">
-                    Item Weight (Kg)
+                    {customerTab === "Shop" ? "Item Quantity (Birds)" : "Item Weight (Kg)"}
                   </label>
-                  <input
-                    type="number"
-                    value={draftItem.itemweight}
-                    onChange={(e) => {
-                      setDraftItem({ ...draftItem, itemweight: e.target.value });
-                      setDraftErrors((prev) => ({ ...prev, itemweight: "" }));
-                    }}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                  />
-                  {draftErrors.itemweight && (
-                    <p className="mt-1 text-xs text-red-600">{draftErrors.itemweight}</p>
+                  {customerTab === "Shop" ? (
+                    <>
+                      <input
+                        type="number"
+                        value={draftItem.itemqty}
+                        onChange={(e) => {
+                          setDraftItem({ ...draftItem, itemqty: e.target.value });
+                          setDraftErrors((prev) => ({ ...prev, itemqty: "" }));
+                        }}
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                      />
+                      {draftErrors.itemqty && (
+                        <p className="mt-1 text-xs text-red-600">{draftErrors.itemqty}</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        value={draftItem.itemweight}
+                        onChange={(e) => {
+                          setDraftItem({ ...draftItem, itemweight: e.target.value });
+                          setDraftErrors((prev) => ({ ...prev, itemweight: "" }));
+                        }}
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                      />
+                      {draftErrors.itemweight && (
+                        <p className="mt-1 text-xs text-red-600">{draftErrors.itemweight}</p>
+                      )}
+                    </>
                   )}
                 </div>
                 <div>
@@ -733,7 +770,7 @@ const OrderMaster = () => {
                   <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <tr>
                       <th className="px-4 py-3">Item</th>
-                      <th className="px-4 py-3 text-right">Weight</th>
+                      <th className="px-4 py-3 text-right">{customerTab === "Shop" ? "Quantity (Birds)" : "Weight"}</th>
                       <th className="px-4 py-3 text-center">Status</th>
                       <th className="px-4 py-3 text-center">Action</th>
                     </tr>
@@ -750,7 +787,9 @@ const OrderMaster = () => {
                         <tr key={it.id ?? `${it.itemid}`}>
                           <td className="px-4 py-3 font-semibold text-slate-700">{getItemName(it.itemid)}</td>
                           <td className="px-4 py-3 text-right tabular-nums text-slate-600">
-                            {Number(it.itemweight || 0).toFixed(2)} Kg
+                            {customerTab === "Shop"
+                            ? `${Number(it.itemqty || it.itemweight || 0)} Birds`
+                              : `${Number(it.itemweight || 0).toFixed(2)} Kg`}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700">
@@ -787,7 +826,7 @@ const OrderMaster = () => {
                       created_by: "1",
                     });
                     setOrderItems([]);
-                    setDraftItem({ itemid: "", itemweight: "", status: "ordered" });
+                    setDraftItem({ itemid: "", itemweight: "", itemqty: "", status: "ordered" });
                     setShowItemForm(false);
                     setEditReason("");
                   }}
@@ -816,7 +855,7 @@ const OrderMaster = () => {
               type="text"
               value={orderSearch}
               onChange={(e) => setOrderSearch(e.target.value)}
-              placeholder="Filter by customer, status, or date"
+              placeholder="Filter by customer, status, or item"
               className="h-9 w-full sm:w-72 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
             />
           </div>
@@ -826,19 +865,22 @@ const OrderMaster = () => {
                 <tr>
                   <th className="px-5 py-4">Customer</th>
                   <th className="px-5 py-4">Order Status</th>
-                  <th className="px-5 py-4">Order Date</th>
-                  {(canEdit || canDelete || canView) && <th className="px-5 py-4 text-center">Action</th>}
+                  <th className="px-5 py-4">Item</th>
+                  <th className="px-5 py-4">Quantity</th>
+                  {hasActionColumn && <th className="px-5 py-4 text-center">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={canEdit || canDelete ? 5 : 4} className="py-24 text-center text-slate-400">
+                    <td colSpan={hasActionColumn ? 5 : 4} className="py-24 text-center text-slate-400">
                       No orders found for {selectedDate}.
                     </td>
                   </tr>
                 ) : (
                   filteredOrders.map((row) => {
+                    const selectedItemId = selectedItemByOrder[String(row.id)] || String(row.items?.[0]?.itemid ?? "");
+                    const selectedItem = (row.items || []).find((it) => String(it.itemid) === selectedItemId) || row.items?.[0];
                     return (
                       <tr key={row.id} className="group hover:bg-blue-50/30 transition-colors">
                         <td className="px-5 py-3 font-bold text-slate-800">{getCustomerName(row.customerid)}</td>
@@ -848,10 +890,31 @@ const OrderMaster = () => {
                           </span>
                         </td>
                         <td className="px-5 py-3 text-slate-700 font-semibold">
-                          {row.orderdate?.split("T")[0] || ""}
+                          <select
+                            value={selectedItemId}
+                            onChange={(e) =>
+                              setSelectedItemByOrder((prev) => ({ ...prev, [String(row.id)]: e.target.value }))
+                            }
+                            className="h-9 min-w-[180px] rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+                          >
+                            {(row.items || []).length === 0 ? (
+                              <option value="">No items</option>
+                            ) : (
+                              (row.items || []).map((it, idx) => (
+                                <option key={it.id ?? `${row.id}-${idx}`} value={String(it.itemid)}>
+                                  {getItemName(it.itemid)}
+                                </option>
+                              ))
+                            )}
+                          </select>
+                        </td>
+                        <td className="px-5 py-3 text-slate-700 font-semibold tabular-nums">
+                          {customerTab === "Shop"
+                            ? `${Number(selectedItem?.itemqty || selectedItem?.itemweight || 0)} Birds`
+                            : `${Number(selectedItem?.itemweight || 0).toFixed(2)} Kg`}
                         </td>
                        
-                        {(canEdit || canDelete || canView) && (
+                        {hasActionColumn && (
                           <td className="px-5 py-3 text-center">
                             <div className="flex items-center justify-center gap-2">
                                {canView && (
@@ -891,13 +954,13 @@ const OrderMaster = () => {
               </tbody>
               {filtered.length > 0 && (
                 <tfoot className="bg-slate-900 text-white shadow-2xl">
-                  {canEdit || canDelete ? (
+                  {hasActionColumn ? (
                     <tr>
-                      <td colSpan={2} className="px-5 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">
+                      <td colSpan={3} className="px-5 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">
                         Total for {selectedDate}
                       </td>
                       <td className="px-5 py-4 text-right tabular-nums font-bold">
-                        {dayTotals.totalWeight.toFixed(2)} Kg
+                        {customerTab === "Shop" ? `${dayTotals.totalQty} Birds` : `${dayTotals.totalWeight.toFixed(2)} Kg`}
                       </td>
                       <td className="px-5 py-4 text-right tabular-nums text-xl font-black text-blue-400">
                         {dayTotals.totalItems} Items
@@ -905,11 +968,11 @@ const OrderMaster = () => {
                     </tr>
                   ) : (
                     <tr>
-                      <td className="px-5 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">
+                      <td colSpan={2} className="px-5 py-4 font-black uppercase tracking-widest text-[10px] text-slate-400">
                         Total for {selectedDate}
                       </td>
                       <td className="px-5 py-4 text-right tabular-nums font-bold">
-                        {dayTotals.totalWeight.toFixed(2)} Kg
+                        {customerTab === "Shop" ? `${dayTotals.totalQty} Birds` : `${dayTotals.totalWeight.toFixed(2)} Kg`}
                       </td>
                       <td className="px-5 py-4 text-right tabular-nums text-xl font-black text-blue-400">
                         {dayTotals.totalItems} Items
@@ -958,7 +1021,7 @@ const OrderMaster = () => {
                 <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
                   <tr>
                     <th className="px-4 py-3">Item</th>
-                    <th className="px-4 py-3 text-right">Weight</th>
+                    <th className="px-4 py-3 text-right">{customerTab === "Shop" ? "Quantity (Birds)" : "Weight"}</th>
                     <th className="px-4 py-3 text-center">Status</th>
                     {(canEdit || canDelete) && <th className="px-4 py-3 text-center">Action</th>}
                   </tr>
@@ -976,18 +1039,37 @@ const OrderMaster = () => {
                         <td className="px-4 py-3 font-semibold text-slate-700">{getItemName(it.itemid)}</td>
                         <td className="px-4 py-3 text-right">
                           {canEdit ? (
-                            <input
-                              type="number"
-                              value={it.itemweight}
-                              onChange={(e) =>
-                                setViewItems((prev) =>
-                                  prev.map((x, i) => (i === idx ? { ...x, itemweight: Number(e.target.value) } : x))
-                                )
-                              }
-                              className="w-28 px-2 py-1 border border-slate-200 rounded-md text-sm text-right"
-                            />
+                            customerTab === "Shop" ? (
+                              <input
+                                type="number"
+                                value={it.itemqty || it.itemweight || 0}
+                                onChange={(e) =>
+                                  setViewItems((prev) =>
+                                    prev.map((x, i) =>
+                                      i === idx
+                                        ? { ...x, itemqty: Number(e.target.value), itemweight: Number(e.target.value) }
+                                        : x
+                                    )
+                                  )
+                                }
+                                className="w-28 px-2 py-1 border border-slate-200 rounded-md text-sm text-right"
+                              />
+                            ) : (
+                              <input
+                                type="number"
+                                value={it.itemweight}
+                                onChange={(e) =>
+                                  setViewItems((prev) =>
+                                    prev.map((x, i) => (i === idx ? { ...x, itemweight: Number(e.target.value) } : x))
+                                  )
+                                }
+                                className="w-28 px-2 py-1 border border-slate-200 rounded-md text-sm text-right"
+                              />
+                            )
                           ) : (
-                            <span className="tabular-nums">{it.itemweight}</span>
+                            <span className="tabular-nums">
+                              {customerTab === "Shop" ? Number(it.itemqty || it.itemweight || 0) : Number(it.itemweight || 0)}
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
