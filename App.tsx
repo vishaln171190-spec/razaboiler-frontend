@@ -17,6 +17,7 @@ import { getCookie, removeCookie } from "./src/utils/cookieHelper";
 import { clearAuthUser, getAuthUser } from "./src/utils/auth";
 import { PermissionsProvider } from "./src/utils/PermissionsContext";
 import SalesReports from "./src/pages/SalesReports";
+import PurchaseReports from "./src/pages/PurchaseReports";
 
 function App() {
   const [user, setUser] = useState<any>(() => {
@@ -58,7 +59,7 @@ function App() {
           {route === "payments" && <PaymentMaster />}
           {route === "purchase" && <PurchaseMaster />}
           {route === "sales-reports" && <SalesReports />}
-          {route === "purchase-reports" && <PurchaseMaster />}
+          {route === "purchase-reports" && <PurchaseReports />}
           {route === "orders" && <OrderMaster />}
           {route === "vehicles" && <VehicleMaster />}
           {route === "maintenance" && <MaintenanceMaster />}
