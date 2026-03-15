@@ -83,7 +83,7 @@ const MainLayout = ({ children, onLogout, onNavigate, active, user }: Props) => 
         <span className="rb-sidebar-title">RAZA BOILER</span>
       </div>
       <p className="rb-sidebar-welcome">Welcome, {user?.name || "User"}</p>
-      <nav>
+      <nav className="rb-sidebar-nav">
         <button
           onClick={() => { onNavigate("home"); if (window.innerWidth <= 768) setSidebarOpen(false); }}
           className={`rb-sidebar-link${active === "home" ? " active" : ""}`}

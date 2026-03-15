@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import LoginScreen from "./src/pages/Login";
 import MainLayout from "./src/components/MainLayout";
 import UserMaster from "./src/pages/UserMaster";
@@ -21,23 +21,46 @@ import PurchaseReports from "./src/pages/PurchaseReports";
 import MaintenanceReports from "./src/pages/MaintenanceReports";
 
 function App() {
+  const [route, setRoute] = useState<string>("home");
   const [user, setUser] = useState<any>(() => {
     const stored = getAuthUser();
     if (stored) return stored;
     return getCookie("auth_token") ? {} : null;
   });
+  const loggingOutRef = useRef(false);
 
   const handleLogin = (userData: any) => {
     setUser(userData);
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     removeCookie("auth_token");
     clearAuthUser();
+    setRoute("home");
     setUser(null);
-  };
+  }, []);
 
-  const [route, setRoute] = useState<string>("home");
+  useEffect(() => {
+    const originalFetch = window.fetch.bind(window);
+
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const response = await originalFetch(...args);
+
+      if (response.status === 401 && !loggingOutRef.current) {
+        loggingOutRef.current = true;
+        handleLogout();
+        setTimeout(() => {
+          loggingOutRef.current = false;
+        }, 300);
+      }
+
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [handleLogout]);
 
   return (
     <PermissionsProvider>

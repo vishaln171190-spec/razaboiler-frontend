@@ -12,6 +12,7 @@ import {
 import { getCookie } from '../utils/cookieHelper';
 import { getAuthUser, hasPermission, hasRole } from '../utils/auth';
 import { API_BASE_URL } from "../../constants";
+import { getApiErrorMessage } from "../utils/apiError";
 
 type Vehicle = {
   id: string | number;
@@ -129,7 +130,7 @@ const fetchVehicles = async () => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch vehicles');
+      throw new Error(await getApiErrorMessage(response, 'Failed to fetch vehicles'));
     }
 
     const data = await response.json();
@@ -178,7 +179,7 @@ const fetchVehicles = async () => {
 
   } catch (err) {
     console.error('Error fetching vehicles:', err);
-    setError('Failed to load vehicles');
+    setError((err as Error)?.message || 'Failed to load vehicles');
   } finally {
     setLoading(false);
   }
@@ -206,18 +207,19 @@ const fetchVehicles = async () => {
     try {
       const selectedType = vehicleTypes.find((vt) => vt.vehicletype === formData.type);
       const vehicletypeValue = selectedType ? String(selectedType.id) : formData.type;
-      const payload = {
+      const payload: Record<string, string> = {
         vehicletype: vehicletypeValue,
-        vehicalid: formData.vehicleId.toUpperCase(),
-        rcnumber: formData.vehicleNumber.toUpperCase(),
-        vehicalmodel: formData.model,
-        ownername: formData.ownerName,
-        owneraddress: formData.ownerAddress,
-        dateofjoining: normalizeDate(formData.dateOfJoining),
-        contactpersonname: formData.contactPersonName,
-        contactperson_number: formData.contactPersonNumber,
+        vehicalid: formData.vehicleId.trim().toUpperCase(),
+        rcnumber: formData.vehicleNumber.trim().toUpperCase(),
+        vehicalmodel: formData.model.trim(),
         created_by: formData.createdBy,
       };
+      if (formData.ownerName.trim()) payload.ownername = formData.ownerName.trim();
+      if (formData.ownerAddress.trim()) payload.owneraddress = formData.ownerAddress.trim();
+      if (formData.contactPersonName.trim()) payload.contactpersonname = formData.contactPersonName.trim();
+      if (formData.contactPersonNumber.trim()) payload.contactperson_number = formData.contactPersonNumber.trim();
+      const normalizedJoinDate = normalizeDate(formData.dateOfJoining);
+      if (normalizedJoinDate) payload.dateofjoining = normalizedJoinDate;
 
       if (editingId) {
         // Update vehicle
@@ -227,9 +229,7 @@ const fetchVehicles = async () => {
           body: JSON.stringify(payload),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to update vehicle');
-        }
+        if (!response.ok) throw new Error(await getApiErrorMessage(response, 'Failed to update vehicle'));
 
         setEditingId(null);
         setFormData({ vehicleId: '', vehicleNumber: '', model: '', type: vehicleTypes[0]?.vehicletype || 'Heavy', ownerName: '', ownerAddress: '', dateOfJoining: '', contactPersonName: '', contactPersonNumber: '', createdBy: '1' });
@@ -238,7 +238,7 @@ const fetchVehicles = async () => {
         // Create new vehicle
         const body = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
+          if (value !== undefined && value !== null && value !== '') {
             body.append(key, String(value));
           }
         });
@@ -249,16 +249,14 @@ const fetchVehicles = async () => {
           body,
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to create vehicle');
-        }
+        if (!response.ok) throw new Error(await getApiErrorMessage(response, 'Failed to create vehicle'));
 
         setFormData({ vehicleId: '', vehicleNumber: '', model: '', type: vehicleTypes[0]?.vehicletype || 'Heavy', ownerName: '', ownerAddress: '', dateOfJoining: '', contactPersonName: '', contactPersonNumber: '', createdBy: '1' });
         await fetchVehicles();
       }
     } catch (err) {
       console.error('Error saving vehicle:', err);
-      setError('Failed to save vehicle. Please try again.');
+      setError((err as Error)?.message || 'Failed to save vehicle. Please try again.');
     } finally {
       setSaveLoading(false);
     }
@@ -280,14 +278,12 @@ const fetchVehicles = async () => {
         headers: getAuthHeaders(),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete vehicle');
-      }
+      if (!response.ok) throw new Error(await getApiErrorMessage(response, 'Failed to delete vehicle'));
 
       await fetchVehicles();
     } catch (err) {
       console.error('Error deleting vehicle:', err);
-      setError('Failed to delete vehicle. Please try again.');
+      setError((err as Error)?.message || 'Failed to delete vehicle. Please try again.');
     } finally {
       setSaveLoading(false);
     }
